@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+/* LastMin AI Design System - Calming Educational Theme 
+All colors MUST be HSL.
+*/
+
+@theme {
+  /* Dark cosmic theme like Reflect */
+  --color-background: 240 15% 6%;
+  --color-foreground: 240 5% 90%;
+
+  --color-card: 240 12% 8%;
+  --color-card-foreground: 240 5% 90%;
+
+  --color-popover: 240 12% 8%;
+  --color-popover-foreground: 240 5% 90%;
+
+  /* Primary: Purple/Violet accents like Reflect */
+  --color-primary: 260 75% 65%;
+  --color-primary-foreground: 0 0% 100%;
+  --color-primary-light: 260 60% 75%;
+  --color-primary-lighter: 260 45% 85%;
+
+  /* Secondary: Dark purples */
+  --color-secondary: 245 15% 12%;
+  --color-secondary-foreground: 240 5% 90%;
+
+  /* Muted cosmic colors */
+  --color-muted: 240 10% 10%;
+  --color-muted-foreground: 240 5% 65%;
+
+  /* Accent: Bright purple for highlights */
+  --color-accent: 270 80% 70%;
+  --color-accent-foreground: 0 0% 100%;
+
+  /* Warning and error states */
+  --color-destructive: 0 75% 60%;
+  --color-destructive-foreground: 0 0% 100%;
+  --color-warning: 45 95% 55%;
+  --color-warning-foreground: 45 25% 15%;
+
+  /* UI elements with subtle purple tints */
+  --color-border: 240 15% 15%;
+  --color-input: 240 12% 12%;
+  --color-ring: 260 75% 65%;
+
+  --radius: 0.75rem;
+
+  /* Cosmic gradients like Reflect */
+  --gradient-primary: linear-gradient(135deg, hsl(260 75% 65%) 0%, hsl(280 70% 70%) 100%);
+  --gradient-secondary: linear-gradient(135deg, hsl(245 15% 12%) 0%, hsl(240 12% 8%) 100%);
+  --gradient-hero: linear-gradient(135deg, hsl(240 15% 6%) 0%, hsl(260 20% 10%) 50%, hsl(280 25% 8%) 100%);
+  --gradient-cosmic: radial-gradient(ellipse at center, hsl(260 75% 65% / 0.3) 0%, hsl(240 15% 6%) 70%);
+  
+  /* Animation and transition variables */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-soft: 0 4px 20px -4px hsl(260 75% 65% / 0.3);
+  --shadow-card: 0 2px 10px -2px hsl(0 0% 0% / 0.5);
+  --shadow-glow: 0 0 30px hsl(260 75% 65% / 0.4);
+
+  --color-sidebar-background: 240 12% 8%;
+  --color-sidebar-foreground: 240 5% 90%;
+  --color-sidebar-primary: 260 75% 65%;
+  --color-sidebar-primary-foreground: 0 0% 100%;
+  --color-sidebar-accent: 245 15% 12%;
+  --color-sidebar-accent-foreground: 240 5% 90%;
+  --color-sidebar-border: 240 15% 15%;
+  --color-sidebar-ring: 260 75% 65%;
+}
+
+html, body {
+  background: hsl(var(--color-background));
+  background-image: var(--gradient-cosmic);
+  color: hsl(var(--color-foreground));
+  min-height: 100vh;
+  height: 100%;
+  overflow-x: hidden; /* Prevent horizontal scrollbar */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Add cosmic particle effect styling */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, hsl(260 75% 65% / 0.3), transparent),
+    radial-gradient(1px 1px at 40px 70px, hsl(280 70% 70% / 0.2), transparent),
+    radial-gradient(1px 1px at 90px 40px, hsl(240 60% 80% / 0.4), transparent),
+    radial-gradient(1px 1px at 130px 80px, hsl(270 80% 60% / 0.3), transparent);
+  background-repeat: repeat;
+  background-size: 150px 150px;
+  pointer-events: none;
+  z-index: -1;
+  animation: sparkle 20s linear infinite;
+  overflow: hidden;
+}
+
+@keyframes sparkle {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-150px); }
+}
+
+/* Glow effects for buttons and interactive elements */
+.btn-primary, [class*="bg-primary"] {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Glass morphism effect for cards */
+.card, [class*="bg-card"] {
+  backdrop-filter: blur(10px);
+  border: 1px solid hsl(var(--color-border));
+}
+
+/* Hide scrollbar completely while maintaining scroll functionality */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: transparent;
+}
+
+/* Hide scrollbar for Firefox */
+html {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+/* Hide scrollbar for all elements */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Utility class for hiding scrollbars */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* Prevent layout shift and unwanted scrollbars */
+#root {
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Mobile and touch optimizations */
+@media (max-width: 768px) {
+  /* Improve touch targets */
+  button, a, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Better spacing for mobile */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Enhanced touch targets for tablets */
+  button, a {
+    min-height: 48px;
+  }
+}
+
+/* Custom shadow utilities for interactive elements */
+.shadow-glow-strong {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
