@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { protect } from '../middleware/auth.js';
-import { chatCompletion, analyze, summarize, quizQuestions } from '../services/aiService.js';
+import { chatCompletion, analyze, summarize, quizQuestions, fetchWebContent, chatCompletionWithWebAccess } from '../services/aiService.js';
 import Document from '../models/Document.js';
 
 const router = express.Router();
@@ -277,6 +277,111 @@ router.get('/usage', protect, async (req, res, next) => {
       data: { usage }
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// @desc    Fetch web content via Chrome extension
+// @route   POST /api/ai/web-content
+// @access  Private
+router.post('/web-content', protect, [
+  body('url')
+    .notEmpty()
+    .withMessage('URL is required')
+    .isURL()
+    .withMessage('Valid URL is required')
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { url } = req.body;
+    console.log(`[AI Route] Fetching web content for: ${url}`);
+
+    const content = await fetchWebContent(url);
+    
+    if (!content) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          message: 'Failed to fetch web content. Make sure the Chrome extension bridge is running.',
+          hint: 'Start the bridge server with: cd chrome-extension && npm start'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        content,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('[AI Route] Web content fetch error:', error);
+    next(error);
+  }
+});
+
+// @desc    Chat with AI using web content for enhanced context
+// @route   POST /api/ai/chat-web
+// @access  Private
+router.post('/chat-web', protect, [
+  body('message')
+    .notEmpty()
+    .withMessage('Message is required')
+    .isLength({ max: 1000 })
+    .withMessage('Message cannot exceed 1000 characters'),
+  body('urls')
+    .optional()
+    .isArray()
+    .withMessage('URLs must be an array'),
+  body('urls.*')
+    .optional()
+    .isURL()
+    .withMessage('Each URL must be valid'),
+  body('context')
+    .optional()
+    .isLength({ max: 5000 })
+    .withMessage('Context cannot exceed 5000 characters')
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { message, context = '', urls = [] } = req.body;
+    console.log(`[AI Route] Chat with web access - URLs: ${urls.length}`);
+
+    const response = await chatCompletionWithWebAccess(message, context, urls);
+
+    res.json({
+      success: true,
+      data: {
+        response,
+        urlsFetched: urls.length,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('[AI Route] Chat with web access error:', error);
     next(error);
   }
 });

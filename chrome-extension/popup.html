@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        .connected {
+            background: rgba(16, 185, 129, 0.2);
+        }
+        
+        .disconnected {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            margin-top: 15px;
+            opacity: 0.6;
+        }
+        
+        .indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .online {
+            background-color: #10b981;
+        }
+        
+        .offline {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">LastMin AI</div>
+        <div class="subtitle">Bridge Extension</div>
+    </div>
+    
+    <div id="status" class="status">
+        <div id="connection-status">Checking connection...</div>
+    </div>
+    
+    <div class="actions">
+        <button id="extract-page">Extract Current Page</button>
+        <button id="open-dashboard">Open LastMin AI</button>
+        <button id="test-connection">Test Connection</button>
+    </div>
+    
+    <div class="footer">
+        v1.0.0 • LastMin AI Bridge
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

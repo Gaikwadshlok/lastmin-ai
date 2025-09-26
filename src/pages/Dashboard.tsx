@@ -26,19 +26,19 @@ const Dashboard = () => {
     },
     {
       icon: FileText,
-      title: "Generate Summaries",
-      description: "Create concise summaries of your study materials",
-      action: "Create Summary",
-      color: "bg-green-500/20 border-green-500/30",
-      link: "/syllabus"
-    },
-    {
-      icon: Target,
       title: "Practice Quiz",
       description: "Test your knowledge with AI-generated quizzes",
       action: "Take Quiz",
-      color: "bg-orange-500/20 border-orange-500/30",
+      color: "bg-green-500/20 border-green-500/30",
       link: "/quiz"
+    },
+    {
+      icon: Target,
+      title: "View Notes",
+      description: "Access and manage your generated study notes",
+      action: "View Notes",
+      color: "bg-orange-500/20 border-orange-500/30",
+      link: "/about"
     }
   ];
 

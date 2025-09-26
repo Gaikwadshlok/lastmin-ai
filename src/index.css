@@ -108,10 +108,15 @@ body::before {
   100% { transform: translateY(-150px); }
 }
 
-/* Glow effects for buttons and interactive elements */
-.btn-primary, [class*="bg-primary"] {
-  box-shadow: var(--shadow-glow);
+/* Disable sparkles for specific components */
+.no-sparkle::before {
+  display: none !important;
 }
+
+/* Glow effects for buttons and interactive elements */
+/* .btn-primary, [class*="bg-primary"] {
+  box-shadow: var(--shadow-glow);
+} */
 
 /* Glass morphism effect for cards */
 .card, [class*="bg-card"] {

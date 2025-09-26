@@ -27,6 +27,9 @@ export const notesService = {
   // Create new note
   createNote: (noteData) => notesAPI.post('/', noteData),
   
+  // Generate notes from document
+  generateNotes: (documentId, title, subject) => notesAPI.post('/generate', { documentId, title, subject }),
+  
   // Update note
   updateNote: (id, noteData) => notesAPI.put(`/${id}`, noteData),
   

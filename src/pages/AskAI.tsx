@@ -91,20 +91,36 @@ const AskAI = () => {
           className="max-w-4xl mx-auto"
         >
           {/* Header Section */}
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-center mb-12"
+          >
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               AI Study Assistant
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Get instant help with your doubts. Ask questions about your syllabus and get detailed explanations.
             </p>
-          </div>
+          </motion.div>
 
           {/* Chat Interface (wired to backend) */}
-          <ChatBot />
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+          >
+            <ChatBot />
+          </motion.div>
 
           {/* Quick Actions Section with Single Infinite Loop */}
-          <div className="mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mb-8 mt-12"
+          >
             <h2 className="text-2xl font-bold text-white mb-6">Quick actions:</h2>
             
             <style>
@@ -158,7 +174,7 @@ const AskAI = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </div>

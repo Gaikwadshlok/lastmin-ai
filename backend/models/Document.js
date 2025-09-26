@@ -143,22 +143,24 @@ const documentSchema = new mongoose.Schema({
     }
   }],
 
-  // Study materials generated
-  studyMaterials: {
-    notes: {
+  // Study materials references (now references to GeneratedDocument)
+  generatedMaterials: {
+    notes: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Note',
-      default: null
-    },
+      ref: 'GeneratedDocument'
+    }],
+    summaries: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'GeneratedDocument'
+    }],
     flashcards: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Flashcard'
+      ref: 'GeneratedDocument'
     }],
-    quiz: {
+    quizzes: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Quiz',
-      default: null
-    }
+      ref: 'GeneratedDocument'
+    }]
   },
 
   // Statistics

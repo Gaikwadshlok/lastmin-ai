@@ -1,0 +1,24 @@
+{
+  "name": "lastmin-ai-bridge-server",
+  "version": "1.0.0",
+  "description": "Bridge server for LastMin AI Chrome Extension",
+  "main": "bridge-server.js",
+  "scripts": {
+    "start": "node bridge-server.js",
+    "dev": "nodemon bridge-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "chrome-extension",
+    "bridge",
+    "lastmin-ai"
+  ],
+  "author": "LastMin AI Team",
+  "license": "MIT"
+}

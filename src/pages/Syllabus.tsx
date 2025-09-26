@@ -136,6 +136,61 @@ const Syllabus = () => {
     }
   };
 
+  const handlePreviewPDF = () => {
+    if (!notesResult) {
+      alert('Please generate notes first');
+      return;
+    }
+
+    // Create a simple HTML content for PDF preview
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Generated Notes</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              line-height: 1.6; 
+              margin: 20px; 
+              background: white;
+              color: black;
+            }
+            h1 { color: #7c3aed; margin-bottom: 20px; }
+            h2 { color: #5b21b6; margin-top: 25px; margin-bottom: 15px; }
+            h3 { color: #6d28d9; margin-top: 20px; margin-bottom: 10px; }
+            p { margin-bottom: 10px; }
+            .header { text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 10px; }
+            .content { margin-top: 20px; white-space: pre-wrap; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>LastMin AI - Generated Study Notes</h1>
+            <p>Generated on ${new Date().toLocaleDateString()}</p>
+          </div>
+          <div class="content">${notesResult.replace(/\n/g, '<br>')}</div>
+        </body>
+      </html>
+    `;
+
+    // Create a blob and open in new window
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in a new popup window
+    const popup = window.open(url, 'NotesPreview', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    
+    if (popup) {
+      popup.onload = () => {
+        // Clean up the blob URL after the popup loads
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      };
+    } else {
+      alert('Please allow pop-ups for this site to preview the PDF');
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-cosmic pt-16 sm:pt-20">
       <Header />
@@ -148,17 +203,27 @@ const Syllabus = () => {
           className="max-w-4xl mx-auto"
         >
           {/* Header Section */}
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-center mb-12"
+          >
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Upload Your Syllabus
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Support for PDF, DOCX, and TXT files. Our AI will analyze and create personalized study materials.
             </p>
-          </div>
+          </motion.div>
 
           {/* Upload Card */}
-          <Card className="bg-card/95 backdrop-blur-md border-2 border-white/10 shadow-2xl shadow-primary/25 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+          >
+            <Card className="bg-card/95 backdrop-blur-md border-2 border-white/10 shadow-2xl shadow-primary/25 mb-8">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Upload className="h-5 w-5" />
@@ -229,13 +294,16 @@ const Syllabus = () => {
                   <Button
                     disabled={!uploadedFile || isGenerating}
                     onClick={handleGenerateNotes}
-                    className="flex-1 bg-gradient-primary hover:opacity-90 shadow-lg shadow-primary/30 h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`flex-1 hover:opacity-90 shadow-lg shadow-primary/30 h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed border-2 border-primary/50 ${
+                      uploadedFile ? 'bg-primary text-white' : 'bg-gradient-primary'
+                    }`}
                   >
                     {isGenerating ? `Generating... ${Math.round(progress)}%` : 'Generate Notes'}
                   </Button>
                 <Button
                   variant="outline"
-                  disabled={!uploadedFile || isGenerating}
+                  disabled={!notesResult}
+                  onClick={handlePreviewPDF}
                   className="px-8 border-white/20 bg-card/60 hover:bg-card/80 backdrop-blur-sm h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Preview
@@ -251,16 +319,6 @@ const Syllabus = () => {
                     {error}
                   </div>
                 )}
-                {notesResult && !isGenerating && (
-                  <Card className="bg-gray-900/70 border border-white/10">
-                    <CardContent className="pt-4">
-                      <h3 className="text-white font-semibold mb-2">Generated Notes</h3>
-                      <pre className="text-gray-300 whitespace-pre-wrap text-sm max-h-96 overflow-y-auto">
-                        {notesResult}
-                      </pre>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
 
               {/* Hidden file input */}
@@ -273,39 +331,63 @@ const Syllabus = () => {
               />
             </CardContent>
           </Card>
+          </motion.div>
 
           {/* File Type Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
-              <CardContent className="pt-6">
-                <FileText className="h-12 w-12 text-red-400 mx-auto mb-3" />
-                <h3 className="text-white font-semibold mb-2">PDF Files</h3>
-                <p className="text-gray-400 text-sm">
-                  Upload PDF documents with text content for analysis
-                </p>
-              </CardContent>
-            </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
+                <CardContent className="pt-6">
+                  <FileText className="h-12 w-12 text-red-400 mx-auto mb-3" />
+                  <h3 className="text-white font-semibold mb-2">PDF Files</h3>
+                  <p className="text-gray-400 text-sm">
+                    Upload PDF documents with text content for analysis
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
-              <CardContent className="pt-6">
-                <File className="h-12 w-12 text-blue-400 mx-auto mb-3" />
-                <h3 className="text-white font-semibold mb-2">DOCX Files</h3>
-                <p className="text-gray-400 text-sm">
-                  Microsoft Word documents with formatted content
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
+                <CardContent className="pt-6">
+                  <File className="h-12 w-12 text-blue-400 mx-auto mb-3" />
+                  <h3 className="text-white font-semibold mb-2">DOCX Files</h3>
+                  <p className="text-gray-400 text-sm">
+                    Microsoft Word documents with formatted content
                 </p>
               </CardContent>
             </Card>
+            </motion.div>
 
-            <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
-              <CardContent className="pt-6">
-                <FileText className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                <h3 className="text-white font-semibold mb-2">TXT Files</h3>
-                <p className="text-gray-400 text-sm">
-                  Plain text files with syllabus or course content
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              <Card className="bg-card/95 backdrop-blur-md border border-white/10 text-center">
+                <CardContent className="pt-6">
+                  <FileText className="h-12 w-12 text-green-400 mx-auto mb-3" />
+                  <h3 className="text-white font-semibold mb-2">TXT Files</h3>
+                  <p className="text-gray-400 text-sm">
+                    Plain text files with syllabus or course content
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </motion.div>
       </div>
     </div>

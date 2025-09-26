@@ -18,6 +18,7 @@ import uploadRoutes from './routes/upload.js';
 import aiRoutes from './routes/ai.js';
 import quizRoutes from './routes/quiz.js';
 import notesRoutes from './routes/notes.js';
+import generatedDocumentRoutes from './routes/generatedDocuments.js';
 import reportRoutes from './routes/report.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -125,6 +126,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/generated-documents', generatedDocumentRoutes);
 app.use('/api/report', reportRoutes);
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

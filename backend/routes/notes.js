@@ -683,4 +683,97 @@ router.get('/stats/overview', protect, async (req, res, next) => {
   }
 });
 
+// @desc    Generate notes from document
+// @route   POST /api/notes/generate
+// @access  Private
+router.post('/generate', protect, [
+  body('documentId')
+    .notEmpty()
+    .withMessage('Document ID is required'),
+  body('title')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Title cannot exceed 200 characters')
+], async (req, res, next) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          type: 'Validation Error',
+          details: errors.array()
+        }
+      });
+    }
+
+    const { documentId, title, subject = 'General' } = req.body;
+
+    // In a real implementation, you would:
+    // 1. Fetch the document from the database
+    // 2. Extract text content from the document
+    // 3. Use AI service to generate notes
+    // 4. Save the generated notes to database
+
+    // For now, we'll simulate the process
+    const generatedContent = `# AI-Generated Study Notes
+
+## Overview
+This document contains comprehensive study notes generated from your uploaded file.
+
+## Key Points
+- Important concepts extracted from the document
+- Structured learning materials
+- Summary of main topics
+- Practice questions and examples
+
+## Detailed Analysis
+[Generated content would appear here based on document analysis]
+
+## Conclusion
+These notes provide a structured overview of the material for effective studying.
+`;
+
+    const wordCount = generatedContent.split(/\s+/).length;
+    const readingTime = Math.ceil(wordCount / 200);
+
+    const newNote = {
+      id: String(notes.length + 1),
+      title: title || `Generated Notes - ${new Date().toLocaleDateString()}`,
+      content: generatedContent,
+      subject,
+      tags: ['ai-generated', 'study-notes'],
+      documentId,
+      userId: req.user.id,
+      isPublic: false,
+      isPinned: false,
+      lastModified: new Date(),
+      createdAt: new Date(),
+      wordCount,
+      readingTime,
+      version: 1,
+      collaborators: [],
+      shareSettings: {
+        allowComments: false,
+        allowEditing: false,
+        expiresAt: null
+      }
+    };
+
+    notes.push(newNote);
+
+    res.status(201).json({
+      success: true,
+      data: { 
+        note: newNote,
+        message: 'Notes generated successfully'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

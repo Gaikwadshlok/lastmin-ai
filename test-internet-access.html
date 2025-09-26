@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LastMin AI Internet Access Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 5px; background: #f8f9fa; }
+        h1 { color: #333; text-align: center; }
+        h3 { color: #495057; }
+        .status { font-weight: bold; }
+        .instructions { background: #e7f3ff; padding: 15px; border-left: 4px solid #2196F3; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 LastMin AI Internet Access Test</h1>
+        
+        <div class="instructions">
+            <h3>📋 How to Test Internet Access:</h3>
+            <ol>
+                <li><strong>Load Chrome Extension:</strong> Go to chrome://extensions/, enable Developer mode, click "Load unpacked", select your chrome-extension folder</li>
+                <li><strong>Run Tests Below:</strong> Click each test button to check different levels of internet access</li>
+                <li><strong>Check Results:</strong> Green = Working, Red = Not Working, Yellow = Pending</li>
+            </ol>
+        </div>
+
+        <div class="test-section pending" id="bridge-test">
+            <h3>🔧 Test 1: Bridge Server Connection</h3>
+            <p>Tests if the bridge server on localhost:5050 is running</p>
+            <button onclick="testBridgeServer()">Test Bridge Server</button>
+            <div class="result" id="bridge-result">Click button to test...</div>
+        </div>
+
+        <div class="test-section pending" id="extension-test">
+            <h3>🧩 Test 2: Chrome Extension Status</h3>
+            <p>Tests if Chrome extension is loaded and connected</p>
+            <button onclick="testExtension()">Test Extension</button>
+            <div class="result" id="extension-result">Click button to test...</div>
+        </div>
+
+        <div class="test-section pending" id="fetch-test">
+            <h3>🌍 Test 3: Web Content Fetching</h3>
+            <p>Tests if the extension can fetch content from a test website</p>
+            <button onclick="testWebFetch()">Test Web Fetch</button>
+            <div class="result" id="fetch-result">Click button to test...</div>
+        </div>
+
+        <div class="test-section pending" id="ai-test">
+            <h3>🤖 Test 4: AI + Internet Integration</h3>
+            <p>Tests if your AI can access web content (requires login)</p>
+            <button onclick="testAIIntegration()">Test AI Integration</button>
+            <div class="result" id="ai-result">Click button to test...</div>
+        </div>
+
+        <div class="test-section" id="summary">
+            <h3>📊 Test Summary</h3>
+            <div id="summary-result">Run tests above to see overall status</div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            bridge: null,
+            extension: null,
+            fetch: null,
+            ai: null
+        };
+
+        async function testBridgeServer() {
+            const resultDiv = document.getElementById('bridge-result');
+            const sectionDiv = document.getElementById('bridge-test');
+            
+            resultDiv.innerHTML = '🔄 Testing bridge server...';
+            sectionDiv.className = 'test-section pending';
+            
+            try {
+                const response = await fetch('http://localhost:5050/test');
+                const data = await response.json();
+                
+                testResults.bridge = true;
+                resultDiv.innerHTML = `✅ <strong>SUCCESS:</strong> ${data.message}<br>Port: ${data.port}<br>Status: Bridge server is running!`;
+                sectionDiv.className = 'test-section success';
+            } catch (error) {
+                testResults.bridge = false;
+                resultDiv.innerHTML = `❌ <strong>FAILED:</strong> ${error.message}<br><br>🔧 <strong>Fix:</strong> Make sure bridge server is running:<br><code>cd chrome-extension && node bridge-server.js</code>`;
+                sectionDiv.className = 'test-section error';
+            }
+            updateSummary();
+        }
+
+        async function testExtension() {
+            const resultDiv = document.getElementById('extension-result');
+            const sectionDiv = document.getElementById('extension-test');
+            
+            resultDiv.innerHTML = '🔄 Testing Chrome extension...';
+            sectionDiv.className = 'test-section pending';
+            
+            // Check if extension is loaded by trying to access chrome.runtime
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                testResults.extension = true;
+                resultDiv.innerHTML = `✅ <strong>SUCCESS:</strong> Chrome extension environment detected!<br>Extension ID: ${chrome.runtime.id || 'Available'}`;
+                sectionDiv.className = 'test-section success';
+            } else {
+                testResults.extension = false;
+                resultDiv.innerHTML = `❌ <strong>FAILED:</strong> Chrome extension not detected<br><br>🔧 <strong>Fix:</strong><br>1. Go to chrome://extensions/<br>2. Enable Developer mode<br>3. Click "Load unpacked"<br>4. Select chrome-extension folder<br>5. Reload this page`;
+                sectionDiv.className = 'test-section error';
+            }
+            updateSummary();
+        }
+
+        async function testWebFetch() {
+            const resultDiv = document.getElementById('fetch-result');
+            const sectionDiv = document.getElementById('fetch-test');
+            
+            resultDiv.innerHTML = '🔄 Testing web content fetching...';
+            sectionDiv.className = 'test-section pending';
+            
+            try {
+                const response = await fetch('http://localhost:5050/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: 'https://httpbin.org/json' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    testResults.fetch = true;
+                    resultDiv.innerHTML = `✅ <strong>SUCCESS:</strong> Web content fetched!<br>Content length: ${data.data.content.length} characters<br>Title: ${data.data.title}`;
+                    sectionDiv.className = 'test-section success';
+                } else {
+                    testResults.fetch = false;
+                    resultDiv.innerHTML = `⚠️ <strong>PARTIAL:</strong> Bridge responded but extension not connected<br>Message: ${data.data.content}`;
+                    sectionDiv.className = 'test-section error';
+                }
+            } catch (error) {
+                testResults.fetch = false;
+                resultDiv.innerHTML = `❌ <strong>FAILED:</strong> ${error.message}<br><br>🔧 Make sure bridge server and extension are both running`;
+                sectionDiv.className = 'test-section error';
+            }
+            updateSummary();
+        }
+
+        async function testAIIntegration() {
+            const resultDiv = document.getElementById('ai-result');
+            const sectionDiv = document.getElementById('ai-test');
+            
+            resultDiv.innerHTML = '🔄 Testing AI + Internet integration...';
+            sectionDiv.className = 'test-section pending';
+            
+            resultDiv.innerHTML = `ℹ️ <strong>INFO:</strong> This test requires authentication.<br><br>🔧 <strong>To test AI + Internet:</strong><br>1. Go to <a href="http://localhost:8080" target="_blank">http://localhost:8080</a><br>2. Login to your account<br>3. Go to Ask AI page<br>4. Try asking: "What's the current weather?" or "Summarize the latest news"<br><br>If the Chrome extension is working, your AI should be able to fetch web content!`;
+            sectionDiv.className = 'test-section pending';
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary-result');
+            let passed = 0;
+            let total = 0;
+            
+            Object.values(testResults).forEach(result => {
+                if (result !== null) {
+                    total++;
+                    if (result) passed++;
+                }
+            });
+            
+            if (total === 0) {
+                summaryDiv.innerHTML = 'No tests run yet';
+                return;
+            }
+            
+            const percentage = Math.round((passed / total) * 100);
+            let status = '';
+            let color = '';
+            
+            if (percentage === 100) {
+                status = '🎉 All systems go! Your AI has internet access!';
+                color = 'success';
+            } else if (percentage >= 50) {
+                status = '⚠️ Partial setup - some components need attention';
+                color = 'pending';
+            } else {
+                status = '❌ Setup incomplete - follow the fix instructions above';
+                color = 'error';
+            }
+            
+            summaryDiv.innerHTML = `
+                <div class="${color}">
+                    <strong>${status}</strong><br>
+                    Tests passed: ${passed}/${total} (${percentage}%)
+                </div>
+            `;
+        }
+
+        // Auto-test bridge server on page load
+        window.addEventListener('load', () => {
+            setTimeout(testBridgeServer, 1000);
+        });
+    </script>
+</body>
+</html>

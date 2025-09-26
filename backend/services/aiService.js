@@ -1,6 +1,7 @@
 // AI Service - Mixtral Only Integration
 import { mockChatCompletion, mockAnalyze, mockSummarize, mockQuizQuestions } from './mockAI.js';
 import mixtralService from './mixtralService.js';
+import { fetchWebContentDirect, searchWeb } from './webScraper.js';
 
 let initialized = false;
 
@@ -23,6 +24,137 @@ export function resetInitialization() {
   console.log('[AI] 🔄 Resetting AI service initialization...');
   // Reload Mixtral configuration with new environment variables
   mixtralService.reloadConfig();
+}
+
+// Chrome Extension Bridge Integration with Direct Web Scraping Fallback
+export async function fetchWebContent(url) {
+  console.log(`[AI] 🌐 Fetching web content: ${url}`);
+  
+  // First try direct web scraping (more reliable)
+  try {
+    const directResult = await fetchWebContentDirect(url);
+    if (directResult && directResult.success) {
+      console.log(`[AI] ✅ Direct scraping successful: ${directResult.wordCount} words`);
+      return directResult;
+    }
+  } catch (error) {
+    console.log(`[AI] ⚠️ Direct scraping failed: ${error.message}`);
+  }
+
+  // Fallback to Chrome extension bridge
+  try {
+    console.log(`[AI] 🔄 Trying Chrome extension bridge...`);
+    
+    const response = await fetch('http://localhost:5051/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      timeout: 30000
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Bridge server responded with ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      console.log(`[AI] ✅ Bridge fetch successful: ${data.data.content?.length || 0} chars`);
+      return {
+        title: data.data.title,
+        url: data.data.url,
+        content: data.data.content,
+        wordCount: data.data.wordCount,
+        timestamp: data.data.timestamp,
+        method: 'chrome-extension'
+      };
+    } else {
+      throw new Error(data.error || 'Failed to fetch content');
+    }
+    
+  } catch (error) {
+    console.error(`[AI] ❌ Both web scraping methods failed for ${url}:`, error.message);
+    
+    // Return informative error response
+    return {
+      success: false,
+      title: 'Web Access Error',
+      url: url,
+      content: `Unable to access ${url}. Both direct scraping and Chrome extension bridge failed. This could be due to website restrictions, network issues, or CORS policies.`,
+      error: error.message,
+      wordCount: 0,
+      timestamp: new Date().toISOString(),
+      method: 'failed'
+    };
+  }
+}
+
+// Enhanced AI chat with web content support
+export async function chatCompletionWithWebAccess(message, context = '', urls = []) {
+  ensureProviders();
+  
+  let enhancedContext = context;
+  let webContent = '';
+  
+  // If URLs provided, fetch their content
+  if (urls.length > 0) {
+    console.log(`[AI] 🔗 Fetching content from ${urls.length} URLs...`);
+    
+    for (const url of urls.slice(0, 3)) { // Limit to 3 URLs
+      const content = await fetchWebContent(url);
+      if (content && content.content) {
+        webContent += `\n\n--- Content from ${content.title} (${url}) ---\n${content.content}\n`;
+      }
+    }
+  }
+  
+  // If no URLs provided but message seems like it needs web data, try to help
+  else if (requiresWebSearch(message)) {
+    console.log('[AI] 🔍 Message appears to need web search');
+    
+    // Check if user is asking for a specific website
+    const urlMatch = message.match(/(?:fetch|get|visit|scrape|check)\s+(?:from\s+)?(?:https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/i);
+    if (urlMatch) {
+      let url = urlMatch[1];
+      if (!url.startsWith('http')) {
+        url = 'https://' + url;
+      }
+      console.log(`[AI] 🎯 Detected URL request: ${url}`);
+      
+      const content = await fetchWebContent(url);
+      if (content) {
+        webContent += `\n\n--- Web Content from ${content.title} ---\n${content.content}\n`;
+      }
+    } else {
+      // General web search request
+      const searchResult = await searchWeb(message);
+      if (searchResult) {
+        webContent += `\n\n--- Web Search Information ---\n${searchResult.content}\n`;
+      }
+    }
+  }
+  
+  // Add web content to context
+  if (webContent) {
+    enhancedContext += `\n\n=== WEB CONTENT ===\n${webContent}\n=== END WEB CONTENT ===\n\nPlease use this web content to provide accurate and current information in your response.`;
+  } else if (requiresWebSearch(message)) {
+    enhancedContext += `\n\nNote: The user is asking about current/web information, but I wasn't able to fetch current data. Please acknowledge this limitation and provide general information you know, suggesting they provide specific URLs if needed.`;
+  }
+  
+  // Use regular chat completion with enhanced context
+  return await chatCompletion(message, enhancedContext);
+}
+
+// Helper function to detect if message needs web search
+function requiresWebSearch(message) {
+  const webKeywords = [
+    'current', 'latest', 'recent', 'today', 'now', 'update', 'news',
+    'weather', 'price', 'stock', 'trending', 'happening', 'search',
+    'find', 'look up', 'check', 'what is', 'tell me about'
+  ];
+  
+  const lowerMessage = message.toLowerCase();
+  return webKeywords.some(keyword => lowerMessage.includes(keyword));
 }
 
 async function safeGenerate(prompt, generationConfig = {}) {

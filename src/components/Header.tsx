@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Brain, Menu, X, Info, BookOpen, LayoutDashboard, MessageSquare, Trophy, LogOut, User } from "lucide-react";
+import { Brain, Menu, X, FileText, BookOpen, LayoutDashboard, MessageSquare, Trophy, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +29,7 @@ const Header = () => {
     { name: 'ASK AI', icon: MessageSquare, path: '/ask-ai' },
     { name: 'DASHBOARD', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'QUIZ', icon: Trophy, path: '/quiz' },
-    { name: 'ABOUT US', icon: Info, path: '/about' },
+    { name: 'NOTES', icon: FileText, path: '/notes' },
   ];
 
   return (

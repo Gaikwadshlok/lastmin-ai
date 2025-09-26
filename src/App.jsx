@@ -9,7 +9,6 @@ import { Loader } from "@/components/Loader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
-import GlobalSparkles from "@/components/GlobalSparkles";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -17,7 +16,8 @@ import Dashboard from "./pages/Dashboard";
 import Syllabus from "./pages/Syllabus";
 import AskAI from "./pages/AskAI";
 import Quiz from "./pages/Quiz";
-import About from "./pages/About";
+import Notes from "./pages/Notes";
+import WebTest from "./pages/WebTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,12 +80,12 @@ const App = () => {
                       <Route path="/syllabus" element={<ProtectedRoute><Syllabus /></ProtectedRoute>} />
                       <Route path="/ask-ai" element={<ProtectedRoute><AskAI /></ProtectedRoute>} />
                       <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
-                      <Route path="/about" element={<About />} />
+                      <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+                      <Route path="/web-test" element={<WebTest />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </ErrorBoundary>
                 </BrowserRouter>
-                <GlobalSparkles />
               </motion.div>
             )}
           </AnimatePresence>
