@@ -1,0 +1,28 @@
+
+Engineering Questions
+
+1. What is the difference between AC and DC current?
+2. Explain Ohm's Law with an example.
+3. What is the significance of the Fourier Transform in signal processing?
+4. Define Stress and Strain with examples.
+5. What are the main differences between a synchronous motor and an asynchronous motor?
+6. Explain the working principle of a transistor.
+7. What are the different types of heat exchangers?
+8. Describe the process of water treatment in a thermal power plant.
+9. What is the Bernoulli's theorem and its applications?
+10. What is the difference between primary and secondary memory?
+11. Explain the architecture of a microcontroller.
+12. What is the significance of the Laplace Transform in control systems?
+13. Define Shear Force and Bending Moment.
+14. Explain the working principle of a hydraulic brake system.
+15. What are the advantages and disadvantages of renewable energy sources?
+16. Describe the types of welding techniques.
+17. What is the role of capacitors in electronic circuits?
+18. Define Entropy and its significance in thermodynamics.
+19. What is the importance of database normalization?
+20. Explain the difference between IPv4 and IPv6.
+21. What is the working principle of a GPS system?
+22. Explain the difference between CNC and conventional machining.
+23. What is the function of a gearbox in mechanical systems?
+24. Define Torsion and give its practical applications.
+25. Explain the concept of deadlock in operating systems.

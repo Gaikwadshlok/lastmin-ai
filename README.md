@@ -1,123 +1,94 @@
-# LastMin AI - Smart Study Companion
+# LastMin AI
 
-> **AI-Powered Study Revolution** - Your intelligent companion for last-minute study sessions with maximum results.
+AI-powered study assistant platform built with React 19, Vite, Tailwind CSS, Radix UI primitives, and React Query.
 
-LastMin AI is a comprehensive study platform built for students who need to maximize their study efficiency. Upload your syllabus and get AI-generated notes, personalized quizzes, and instant doubt solving - all in one seamless experience.
+## Core Features
 
-## 🚀 Features
+- Authentication (register, login, logout) with token persistence
+- First-visit animated loader with Framer Motion
+- Protected routes (Dashboard, Syllabus, Ask AI, Quiz) via `ProtectedRoute`
+- Global error boundary for resilience
+- AI services: chat, document analysis, summaries, quiz generation
+- Quiz, Notes, Upload, and Auth service layers (Axios + interceptors)
+- React Query hooks (`useQuizzes`, `useNotes`, `useAIChat`)
+- Rich UI component library & cosmic theme
 
-### 📚 **Upload & Generate**
-- Upload any syllabus format (PDF, DOC, TXT)
-- Get instant AI-generated study notes
-- Smart content organization and summarization
+## Tech Stack
 
-### 🧠 **Smart Quizzing**
-- Personalized MCQs based on your study material
-- Interactive flashcards for better retention
-- Multiple quiz modes: Practice, Timed, Revision
+| Layer | Technologies |
+|-------|--------------|
+| Core | React 19, Vite |
+| Styling | Tailwind CSS, Radix UI, custom components |
+| State (server) | React Query |
+| State (auth) | Context API + localStorage |
+| Animations | Framer Motion |
+| HTTP | Axios + interceptors |
 
-### ⚡ **Instant Doubts**
-- AI chatbot ready to solve your doubts 24/7
-- Contextual answers based on your uploaded content
-- Interactive Q&A with follow-up questions
+## Project Structure
 
-### 🎯 **Study Dashboard**
-- Track your study progress
-- View quiz performance analytics
-- Manage your uploaded syllabi
-- Set study goals and reminders
+```
+src/
+   App.jsx
+   components/
+      Loader.tsx
+      ProtectedRoute.tsx
+      ErrorBoundary.tsx
+   contexts/AuthContext.tsx
+   services/ (auth, ai, quiz, notes, upload)
+   hooks/ (useQuizzes, useNotes, useAIChat)
+   config/ (api.js, env.ts)
+   pages/ (Index, Login, Signup, Dashboard, Syllabus, AskAI, Quiz, About, NotFound)
+```
 
-## 🛠 Tech Stack
+## Environment Variables
 
-- **Frontend**: React 19.1.0 + Vite 7.0.6
-- **Styling**: Tailwind CSS v4.1.11 with custom cosmic theme
-- **Animations**: Framer Motion
-- **UI Components**: Radix UI primitives
-- **Routing**: React Router DOM v7.7.1
-- **TypeScript**: Full type safety support
-- **State Management**: React Context API
+Create `.env`:
+```
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+Restart dev server after changes.
 
-## 🎨 Design System
+## Getting Started
 
-- **Theme**: Cosmic dark theme with purple and blue gradients
-- **Typography**: Modern, clean fonts with proper hierarchy
-- **Components**: Glass morphism design with backdrop blur effects
-- **Responsive**: Fully responsive across all device sizes
-- **Animations**: Smooth transitions and loading animations
+```powershell
+npm install
+npm run dev
+```
+Visit: http://localhost:5173
 
-## 📱 Pages & Features
+### Scripts
+- dev: Start dev server
+- build: Production build
+- preview: Preview build
+- lint: ESLint
 
-### 🏠 **Homepage**
-- Hero section with call-to-action
-- Feature showcase cards
-- No-scroll design for better UX
+## Auth Flow
+1. User logs in / signs up (`AuthContext`)
+2. Token + user saved to localStorage
+3. Interceptors attach token
+4. 401 clears storage & redirects to /login
 
-### 🔐 **Authentication**
-- User registration and login
-- Secure session management
-- Welcome personalization
+## Protected Routes
+Wrap page in `<ProtectedRoute>`. Unauth users redirected.
 
-### 📊 **Dashboard**
-- Welcome section with user greeting
-- Feature cards for quick access
-- Study statistics and progress tracking
+## Error Handling
+`ErrorBoundary` wraps routes; offers reload/dismiss.
 
-### 📖 **Syllabus Management**
-- Drag-and-drop file upload
-- File validation and processing
-- Organized syllabus library
+## React Query Usage
+Hooks encapsulate fetching & caching. Extend easily.
 
-### 🤖 **AI Chat Assistant**
-- Real-time chat interface
-- Contextual responses
-- Quick action suggestions
+## Future Enhancements
+- Add Vitest + RTL tests
+- Theme toggle + persistence
+- Optimistic updates for notes/quizzes
+- Pagination & infinite scroll
+- Accessibility review
 
-### 🎲 **Quiz System**
-- Multiple choice questions
-- Flashcard mode
-- Performance tracking
-- Different difficulty levels
+## License
+Internal / Proprietary (update if open sourcing).
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn package manager
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/AaryanD4C/LastMin-AI.git
-   cd LastMin-AI
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser**
-   ```
-   http://localhost:8082
-   ```
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-
-## 📱 Responsive Design
-
-LastMin AI is fully responsive and optimized for:
-- **Desktop**: Full navigation with all features
+---
+Made for efficient, last-minute learning. 🚀
 - **Tablet**: Optimized layout with icon navigation
 - **Mobile**: Hamburger menu with touch-friendly interface
 

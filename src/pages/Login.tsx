@@ -1,32 +1,60 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Brain, Mail, Lock } from "lucide-react";
+import { Brain, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
-      // Login user with mock data
-      login({ email, name: email.split('@')[0] });
-      // Navigate to dashboard
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
       navigate('/dashboard');
-    }, 1500);
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await login({ email, password });
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Trigger login without submitting a form
+      void handleLogin();
+    }
   };
 
   return (
@@ -56,7 +84,8 @@ const Login = () => {
           </CardHeader>
           
           <CardContent className="space-y-5 sm:space-y-6 px-6 sm:px-8 pb-6 sm:pb-8">
-            <form onSubmit={handleLogin} className="space-y-5">
+            {/* Replace form with a div to avoid native form submits */}
+            <div className="space-y-5" onKeyDown={handleKeyDown}>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground font-medium text-sm sm:text-base">Email</Label>
                 <div className="relative">
@@ -79,24 +108,42 @@ const Login = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 sm:pl-12 bg-input/60 border-border/60 h-12 sm:h-14 rounded-lg shadow-inner text-base touch-manipulation"
+                    className="pl-10 sm:pl-12 pr-12 sm:pr-14 bg-input/60 border-border/60 h-12 sm:h-14 rounded-lg shadow-inner text-base touch-manipulation"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
+                    ) : (
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
+                    )}
+                  </button>
                 </div>
               </div>
               
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-destructive text-sm">{error}</p>
+                </div>
+              )}
+              
               <Button
-                type="submit"
+                type="button"
+                onClick={handleLogin}
                 className="w-full bg-gradient-primary hover:opacity-90 active:opacity-80 shadow-lg shadow-primary/30 h-12 sm:h-14 rounded-lg font-semibold text-base touch-manipulation"
                 disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
-            </form>
+            </div>
             
             <div className="text-center mt-4">
               <Link 

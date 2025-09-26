@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Loader } from "@/components/Loader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import GlobalSparkles from "@/components/GlobalSparkles";
 import Index from "./pages/Index";
@@ -69,18 +71,19 @@ const App = () => {
                 style={{ minHeight: '100vh', overflow: 'hidden' }}
               >
                 <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/syllabus" element={<Syllabus />} />
-                    <Route path="/ask-ai" element={<AskAI />} />
-                    <Route path="/quiz" element={<Quiz />} />
-                    <Route path="/about" element={<About />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/syllabus" element={<ProtectedRoute><Syllabus /></ProtectedRoute>} />
+                      <Route path="/ask-ai" element={<ProtectedRoute><AskAI /></ProtectedRoute>} />
+                      <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </ErrorBoundary>
                 </BrowserRouter>
                 <GlobalSparkles />
               </motion.div>

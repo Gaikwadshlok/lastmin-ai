@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 
 // A component to render a single character with a reveal animation tied to progress.
@@ -30,6 +30,7 @@ interface LoaderProps {
 }
 
 export const Loader: React.FC<LoaderProps> = ({ progress, onFinished }) => {
+    const [showLoader, setShowLoader] = useState(false);
     // Create a motion value for progress to drive the character animations
     const progressMotionValue = useMotionValue(progress);
 
@@ -38,12 +39,31 @@ export const Loader: React.FC<LoaderProps> = ({ progress, onFinished }) => {
     }, [progress, progressMotionValue]);
 
     useEffect(() => {
-        // When progress hits 100, notify the parent to start the exit transition
-        if (progress >= 100) {
-            // Wait a moment before triggering the exit animation
-            setTimeout(onFinished, 1200);
+        // Check if the loader has already been shown
+        const hasLoadedBefore = localStorage.getItem('hasLoadedBefore');
+        if (!hasLoadedBefore) {
+            setShowLoader(true); // Show the loader for the first time
+            localStorage.setItem('hasLoadedBefore', 'true'); // Mark as shown
+        } else {
+            setShowLoader(false); // Skip the loader on subsequent loads
+            onFinished(); // Immediately signal finished so parent stops waiting
         }
-    }, [progress, onFinished]);
+    }, [onFinished]);
+
+    useEffect(() => {
+        // When progress hits 100, notify the parent to start the exit transition
+        if (progress >= 100 && showLoader) {
+            // Wait a moment before triggering the exit animation
+            setTimeout(() => {
+                setShowLoader(false);
+                onFinished();
+            }, 1200);
+        }
+    }, [progress, onFinished, showLoader]);
+
+    if (!showLoader) {
+        return null; // Skip rendering the loader
+    }
 
     // Define the text content for LastMin AI
     const headingLines = ["LastMin AI"];

@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, File, X } from "lucide-react";
 import Header from "@/components/Header";
+import { uploadService } from '@/services/uploadService.js';
+import { aiService } from '@/services/aiService.js';
 
 const Syllabus = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [notesResult, setNotesResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (file: File) => {
@@ -61,6 +67,8 @@ const Syllabus = () => {
 
   const removeFile = () => {
     setUploadedFile(null);
+  setNotesResult(null);
+  setProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -71,6 +79,61 @@ const Syllabus = () => {
     if (fileType.includes('word')) return <File className="h-8 w-8 text-blue-400" />;
     if (fileType.includes('text')) return <FileText className="h-8 w-8 text-green-400" />;
     return <File className="h-8 w-8 text-gray-400" />;
+  };
+
+  // Simulate a progress bar while backend work occurs
+  const simulateProgress = () => {
+    setProgress(5);
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(interval); // Finish later when actual call resolves
+          return prev;
+        }
+        return prev + Math.random() * 10;
+      });
+    }, 400);
+    return () => clearInterval(interval);
+  };
+
+  const handleGenerateNotes = async () => {
+    if (!uploadedFile || isGenerating) return;
+    setIsGenerating(true);
+    setError(null);
+    setNotesResult(null);
+    setProgress(0);
+
+    const stopSim = simulateProgress();
+    try {
+      // 1. Upload the document
+      const formData = new FormData();
+      formData.append('document', uploadedFile);
+      const uploadRes = await uploadService.uploadDocument(formData);
+      const documentId = uploadRes.data?.data?.document?.id || uploadRes.data?.document?.id;
+
+      // 2. Request AI analysis / summary
+      // Prefer analyzeDocument if full content, else summary
+      const textForAI = uploadRes.data?.data?.extractedText || uploadRes.data?.extractedText || '';
+      let aiText = '';
+      if (textForAI) {
+        const analyzeRes = await aiService.analyzeDocument(textForAI, documentId);
+        aiText = analyzeRes.data?.data?.analysis || JSON.stringify(analyzeRes.data, null, 2);
+      } else {
+        // Fallback: ask for summary based on file name if no extracted text provided
+        const summaryRes = await aiService.generateSummary(uploadedFile.name, 'detailed');
+        aiText = summaryRes.data?.data?.summary || JSON.stringify(summaryRes.data, null, 2);
+      }
+
+      setProgress(100);
+      setNotesResult(aiText);
+    } catch (e: any) {
+      console.error('Generate notes error', e);
+      const msg = e.response?.data?.error?.message || e.message || 'Failed to generate notes';
+      setError(msg);
+    } finally {
+      stopSim();
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -161,20 +224,43 @@ const Syllabus = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4 mt-6">
-                <Button
-                  disabled={!uploadedFile}
-                  className="flex-1 bg-gradient-primary hover:opacity-90 shadow-lg shadow-primary/30 h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Generate Notes
-                </Button>
+              <div className="flex flex-col gap-4 mt-6">
+                <div className="flex gap-4">
+                  <Button
+                    disabled={!uploadedFile || isGenerating}
+                    onClick={handleGenerateNotes}
+                    className="flex-1 bg-gradient-primary hover:opacity-90 shadow-lg shadow-primary/30 h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? `Generating... ${Math.round(progress)}%` : 'Generate Notes'}
+                  </Button>
                 <Button
                   variant="outline"
-                  disabled={!uploadedFile}
+                  disabled={!uploadedFile || isGenerating}
                   className="px-8 border-white/20 bg-card/60 hover:bg-card/80 backdrop-blur-sm h-12 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Preview
                 </Button>
+                </div>
+                {isGenerating && (
+                  <div className="w-full bg-gray-700/40 h-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 transition-all" style={{ width: `${Math.min(100, progress)}%` }} />
+                  </div>
+                )}
+                {error && (
+                  <div className="p-3 border border-red-500/30 bg-red-500/10 rounded-md text-sm text-red-300">
+                    {error}
+                  </div>
+                )}
+                {notesResult && !isGenerating && (
+                  <Card className="bg-gray-900/70 border border-white/10">
+                    <CardContent className="pt-4">
+                      <h3 className="text-white font-semibold mb-2">Generated Notes</h3>
+                      <pre className="text-gray-300 whitespace-pre-wrap text-sm max-h-96 overflow-y-auto">
+                        {notesResult}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Hidden file input */}
