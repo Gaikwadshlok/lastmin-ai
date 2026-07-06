@@ -47,8 +47,8 @@ class MixtralService {
 
     try {
       const systemPrompt = context ? 
-        `Context: ${context}\n\nYou are a helpful AI study assistant. Provide clear, educational responses based on the context provided.` :
-        'You are a helpful AI study assistant. Provide clear, educational responses to help students learn.';
+        `Context: ${context}\n\nYou are a helpful AI study assistant. Provide clear, educational responses based on the context provided. CRITICAL FORMATTING RULES: 1) Use only plain text - NO markdown formatting whatsoever 2) Do NOT use **, ***, ####, ###, ##, #, bullet points, or any markdown syntax 3) Use simple sentences with natural line breaks 4) Write like you're speaking directly to the student in plain English.` :
+        'You are a helpful AI study assistant. Provide clear, educational responses to help students learn. CRITICAL FORMATTING RULES: 1) Use only plain text - NO markdown formatting whatsoever 2) Do NOT use **, ***, ####, ###, ##, #, bullet points, or any markdown syntax 3) Use simple sentences with natural line breaks 4) Write like you\'re speaking directly to the student in plain English.';
 
       const response = await this.client.post('/chat/completions', {
         model: this.model,

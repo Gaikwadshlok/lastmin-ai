@@ -36,6 +36,9 @@ export const uploadService = {
   downloadDocument: (id) => uploadAPI.get(`/documents/${id}/download`, {
     responseType: 'blob'
   }),
+  
+  // Reprocess document text extraction
+  reprocessDocument: (id) => uploadAPI.post(`/documents/${id}/reprocess`),
 };
 
 export default uploadService;

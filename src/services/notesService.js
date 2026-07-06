@@ -18,17 +18,17 @@ notesAPI.interceptors.request.use((config) => {
 });
 
 export const notesService = {
-  // Get user's notes
+  // Get user's notes with optional filters
   getNotes: (params = {}) => notesAPI.get('/', { params }),
+  
+  // Get notes by document ID
+  getNotesByDocument: (documentId) => notesAPI.get(`/document/${documentId}`),
   
   // Get note by ID
   getNote: (id) => notesAPI.get(`/${id}`),
   
-  // Create new note
-  createNote: (noteData) => notesAPI.post('/', noteData),
-  
-  // Generate notes from document
-  generateNotes: (documentId, title, subject) => notesAPI.post('/generate', { documentId, title, subject }),
+  // Generate notes from document (AI-powered or manual)
+  generateNotesFromDocument: (documentId, noteData) => notesAPI.post(`/generate/${documentId}`, noteData),
   
   // Update note
   updateNote: (id, noteData) => notesAPI.put(`/${id}`, noteData),
@@ -36,17 +36,25 @@ export const notesService = {
   // Delete note
   deleteNote: (id) => notesAPI.delete(`/${id}`),
   
-  // Toggle pin status
-  togglePin: (id) => notesAPI.patch(`/${id}/pin`),
+  // Legacy compatibility methods
+  createNote: (noteData) => {
+    // If documentId is provided, use the new generate endpoint
+    if (noteData.documentId || noteData.sourceDocument) {
+      const docId = noteData.documentId || noteData.sourceDocument;
+      return notesAPI.post(`/generate/${docId}`, noteData);
+    }
+    // For standalone notes, we'd need a separate endpoint
+    throw new Error('Creating notes without a source document is not currently supported');
+  },
   
-  // Update sharing settings
-  updateSharing: (id, shareSettings) => notesAPI.patch(`/${id}/share`, shareSettings),
-  
-  // Get note versions
-  getNoteVersions: (id) => notesAPI.get(`/${id}/versions`),
-  
-  // Get notes statistics
-  getNotesStats: () => notesAPI.get('/stats/overview'),
+  generateNotes: (documentId, title, subject, content = '', tags = []) => {
+    return notesAPI.post(`/generate/${documentId}`, {
+      title,
+      subject,
+      content,
+      tags
+    });
+  }
 };
 
 export default notesService;

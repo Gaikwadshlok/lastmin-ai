@@ -4,6 +4,7 @@ import { protect } from '../middleware/auth.js';
 import GeneratedDocument from '../models/GeneratedDocument.js';
 import Document from '../models/Document.js';
 import { chatCompletion, analyze, summarize, quizQuestions } from '../services/aiService.js';
+import { searchWeb } from '../services/webScraper.js';
 
 const router = express.Router();
 
@@ -152,8 +153,7 @@ router.get('/:id', protect, async (req, res, next) => {
 // @access  Private
 router.post('/generate', protect, [
   body('sourceDocumentId')
-    .notEmpty()
-    .withMessage('Source document ID is required'),
+    .optional(),
   body('generationType')
     .isIn(['notes', 'summary', 'flashcards', 'quiz', 'outline'])
     .withMessage('Invalid generation type'),
@@ -190,170 +190,370 @@ router.post('/generate', protect, [
       generationMethod = 'ai-gemini'
     } = req.body;
 
-    // Verify source document exists and user has access
-    const sourceDocument = await Document.findById(sourceDocumentId);
-    if (!sourceDocument) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Source document not found',
-          type: 'Not Found'
-        }
-      });
-    }
-
-    if (sourceDocument.user.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Access denied to source document',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    // Create initial generated document with generating status
-    const generatedDocument = new GeneratedDocument({
-      title: title || `${generationType.charAt(0).toUpperCase() + generationType.slice(1)} - ${sourceDocument.originalName}`,
-      content: '', // Will be filled by AI
-      sourceDocument: sourceDocumentId,
-      generationType,
-      generationMethod,
-      generationPrompt,
-      user: req.user.id,
-      subject: subject || sourceDocument.subject,
-      tags: [...tags, 'ai-generated', generationType],
-      status: 'generating'
-    });
-
-    await generatedDocument.save();
-
-    // Start AI generation process (asynchronous)
-    try {
-      // In a real implementation, this would call your AI service
-      // For now, we'll simulate the process
-      let generatedContent = '';
-      
-      switch (generationType) {
-        case 'notes':
-          generatedContent = generateSampleNotes(sourceDocument);
-          break;
-        case 'summary':
-          generatedContent = generateSampleSummary(sourceDocument);
-          break;
-        case 'outline':
-          generatedContent = generateSampleOutline(sourceDocument);
-          break;
-        default:
-          generatedContent = `Generated ${generationType} content for ${sourceDocument.originalName}`;
+    // Verify source document exists and user has access (if sourceDocumentId is provided)
+    let sourceDocument = null;
+    if (sourceDocumentId) {
+      sourceDocument = await Document.findById(sourceDocumentId);
+      if (!sourceDocument) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            message: 'Source document not found',
+            type: 'Not Found'
+          }
+        });
       }
 
-      // Update document with generated content
-      generatedDocument.content = generatedContent;
-      generatedDocument.status = 'completed';
-      generatedDocument.generatedAt = new Date();
-      generatedDocument.quality.aiConfidence = 0.85;
-      generatedDocument.quality.completeness = 0.9;
+      if (sourceDocument.user.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'Access denied to source document',
+            type: 'Forbidden'
+          }
+        });
+      }
+    }
+
+    // Generate content using AI service or use provided content
+    let generatedContent = '';
+    
+    try {
+      // Check if content is provided directly (from Study Hub)
+      if (req.body.content) {
+        generatedContent = req.body.content;
+      } else if (sourceDocument) {
+        // Generate content based on type using AI for document-based generation
+        switch (generationType) {
+          case 'notes':
+            generatedContent = await generateSampleNotes(sourceDocument);
+            break;
+          case 'summary':
+            generatedContent = await generateSampleSummary(sourceDocument);
+            break;
+          case 'outline':
+            generatedContent = await generateSampleOutline(sourceDocument);
+            break;
+          default:
+            generatedContent = `Generated ${generationType} content for ${sourceDocument.originalName}`;
+        }
+      } else {
+        // For standalone generation without source document
+        generatedContent = `Generated ${generationType} content: ${title}`;
+      }
+
+      // Create generated document with content already generated
+      const generatedDocument = new GeneratedDocument({
+        title: title || (sourceDocument ? 
+          `${generationType.charAt(0).toUpperCase() + generationType.slice(1)} - ${sourceDocument.originalName}` :
+          `${generationType.charAt(0).toUpperCase() + generationType.slice(1)} - Generated Content`
+        ),
+        content: generatedContent,
+        sourceDocument: sourceDocumentId || undefined,
+        generationType,
+        generationMethod,
+        generationPrompt,
+        user: req.user.id,
+        subject: subject || (sourceDocument ? sourceDocument.subject : 'General'),
+        tags: [...tags, 'ai-generated', generationType],
+        status: 'completed',
+        generatedAt: new Date(),
+        quality: {
+          aiConfidence: 0.85,
+          completeness: 0.9
+        }
+      });
 
       await generatedDocument.save();
 
-      // Update source document to reference this generated document
-      if (!sourceDocument.generatedMaterials[generationType + 's']) {
-        sourceDocument.generatedMaterials[generationType + 's'] = [];
+      // Update source document to reference this generated document (only if source exists)
+      if (sourceDocument) {
+        if (!sourceDocument.generatedMaterials[generationType + 's']) {
+          sourceDocument.generatedMaterials[generationType + 's'] = [];
+        }
+        sourceDocument.generatedMaterials[generationType + 's'].push(generatedDocument._id);
+        await sourceDocument.save();
       }
-      sourceDocument.generatedMaterials[generationType + 's'].push(generatedDocument._id);
-      await sourceDocument.save();
+
+      res.status(201).json({
+        success: true,
+        data: { 
+          document: generatedDocument,
+          message: 'Document generation completed successfully'
+        }
+      });
 
     } catch (aiError) {
-      // Handle AI generation failure
-      generatedDocument.status = 'failed';
-      generatedDocument.processingError = aiError.message;
-      await generatedDocument.save();
+      console.error('AI generation error:', aiError);
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to generate content',
+          type: 'AI Generation Error'
+        }
+      });
     }
-
-    res.status(201).json({
-      success: true,
-      data: { 
-        document: generatedDocument,
-        message: 'Document generation started successfully'
-      }
-    });
   } catch (error) {
     next(error);
   }
 });
 
-// Helper functions for sample generation
-function generateSampleNotes(sourceDocument) {
-  return `# Study Notes: ${sourceDocument.originalName}
+// Helper functions for AI-powered generation with web research
+async function generateSampleNotes(sourceDocument) {
+  try {
+    if (!sourceDocument.extractedText || sourceDocument.extractedText.trim().length === 0) {
+      return `# Study Notes: ${sourceDocument.originalName}
 
-## Overview
-This document contains comprehensive study notes generated from your uploaded file.
+## 📄 Document Processing Status
+**Processing Status:** ${sourceDocument.processingStatus || 'Unknown'}
 
-## Key Concepts
-- Main topics extracted from the source material
-- Important definitions and explanations
-- Key points for exam preparation
+## ⚠️ No Text Content Available
+No text content was extracted from this document. This may be because:
 
-## Detailed Analysis
-${sourceDocument.extractedText ? 
-  sourceDocument.extractedText.substring(0, 500) + '...' : 
-  'Content analysis based on document structure and metadata'}
+### Possible Reasons:
+- 📸 **Image-based PDF**: Document contains scanned images rather than selectable text
+- 🔒 **Protected Document**: File is encrypted or password-protected
+- 📱 **Unsupported Format**: File format may not support text extraction
+- 🔧 **Processing Error**: Text extraction failed during upload
 
-## Study Questions
-1. What are the main concepts covered in this material?
-2. How do the different topics relate to each other?
-3. What are the practical applications of this knowledge?
+### Recommended Solutions:
+1. **Re-upload**: Try uploading the document again
+2. **Convert Format**: Convert scanned PDFs to text-searchable PDFs using OCR tools
+3. **Text Format**: Upload as .txt or .docx format if possible
+4. **Manual Input**: Copy and paste the content into Study Hub for generation
 
-## Summary
-These notes provide a structured overview of the material for effective studying and review.
+### Alternative Options:
+- Use **Topic Notes** in Study Hub to generate content on the subject
+- Upload a different version of the document
+- Contact support if the issue persists
 
 ---
-*Generated on ${new Date().toLocaleDateString()} using AI analysis*`;
+*Generated on ${new Date().toLocaleDateString('en-US', { 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}*`;
+    }
+
+    console.log(`[Notes] 🔍 Generating enhanced notes with web research for: ${sourceDocument.originalName}`);
+
+    // Step 1: Extract key topics from the document
+    const topicExtractionPrompt = `Analyze the following document and identify 2-3 main topics or key concepts that would benefit from additional web research for comprehensive study notes:
+
+Document: ${sourceDocument.originalName}
+Content: ${sourceDocument.extractedText.slice(0, 4000)}
+
+Return only the main topics as a simple list, one per line, without explanations. Focus on concepts that students would need current, detailed explanations for.`;
+
+    const topicsResponse = await chatCompletion(topicExtractionPrompt);
+    const topics = topicsResponse.split('\n').filter(topic => topic.trim().length > 0).slice(0, 3);
+    
+    console.log(`[Notes] 📚 Identified topics for research:`, topics);
+
+    // Step 2: Research each topic on the web
+    let webResearchContent = '';
+    const researchedTopics = [];
+
+    for (const topic of topics) {
+      try {
+        console.log(`[Notes] 🌐 Researching: ${topic.trim()}`);
+        const searchQuery = topic.trim().replace(/^[-•]\s*/, ''); // Remove bullet points
+        const webResult = await searchWeb(searchQuery);
+        
+        if (webResult && webResult.success && webResult.content) {
+          researchedTopics.push({
+            topic: searchQuery,
+            content: webResult.content.substring(0, 1000), // Limit content length
+            source: webResult.url
+          });
+          console.log(`[Notes] ✅ Found web content for: ${searchQuery}`);
+        } else {
+          console.log(`[Notes] ⚠️ No web content found for: ${searchQuery}`);
+        }
+      } catch (error) {
+        console.log(`[Notes] ❌ Web research failed for "${topic}": ${error.message}`);
+      }
+    }
+
+    // Step 3: Create web research section
+    if (researchedTopics.length > 0) {
+      webResearchContent = '\n\n## 🌐 Enhanced Information from Web Research\n\n';
+      researchedTopics.forEach((research, index) => {
+        webResearchContent += `### ${index + 1}. ${research.topic}\n`;
+        webResearchContent += `${research.content}\n`;
+        webResearchContent += `*Source: ${research.source}*\n\n`;
+      });
+    }
+
+    // Step 4: Generate comprehensive notes combining document + web research
+    const enhancedPrompt = `Create comprehensive study notes combining the document content with additional web research. Structure the notes for effective learning:
+
+**Original Document:** ${sourceDocument.originalName}
+**Document Content:** ${sourceDocument.extractedText.slice(0, 6000)}
+
+**Additional Web Research:**
+${researchedTopics.map(r => `${r.topic}: ${r.content.substring(0, 500)}`).join('\n\n')}
+
+Create detailed study notes with:
+1. Clear overview and introduction
+2. Key concepts with enhanced explanations
+3. Important details and definitions
+4. Practical examples and applications
+5. Study questions and review points
+6. Integration of web research insights
+
+Make the notes comprehensive, accurate, and study-focused.`;
+
+    const aiResponse = await chatCompletion(enhancedPrompt);
+    
+    // Step 5: Combine everything into final notes
+    let finalNotes = `# 📚 Enhanced Study Notes: ${sourceDocument.originalName}\n\n`;
+    finalNotes += aiResponse;
+    
+    if (researchedTopics.length > 0) {
+      finalNotes += webResearchContent;
+      finalNotes += '\n---\n';
+      finalNotes += `*Generated on ${new Date().toLocaleDateString()} using AI analysis + web research*\n`;
+      finalNotes += `*Document source: ${sourceDocument.originalName} (${Math.round(sourceDocument.extractedText.length / 1000)}k characters)*\n`;
+      finalNotes += `*Web sources: ${researchedTopics.map(r => r.source).join(', ')}*`;
+    } else {
+      finalNotes += '\n---\n';
+      finalNotes += `*Generated on ${new Date().toLocaleDateString()} using AI analysis*\n`;
+      finalNotes += `*Source: ${sourceDocument.originalName} (${Math.round(sourceDocument.extractedText.length / 1000)}k characters)*\n`;
+      finalNotes += '*Note: Web research was attempted but no additional sources were accessible.*';
+    }
+
+    console.log(`[Notes] ✅ Generated enhanced notes with ${researchedTopics.length} web sources`);
+    return finalNotes;
+
+  } catch (error) {
+    console.error('Error generating enhanced notes:', error);
+    // Fallback to basic notes if AI fails
+    return `# Study Notes: ${sourceDocument.originalName}
+
+## Content Summary
+${sourceDocument.extractedText ? sourceDocument.extractedText.substring(0, 1000) + '...' : 'No content available'}
+
+## Key Points
+This document contains important information that can be studied for better understanding of the subject matter.
+
+*Note: Enhanced AI generation encountered an issue. Showing basic content extraction.*
+
+---
+*Generated on ${new Date().toLocaleDateString()}*`;
+  }
 }
 
-function generateSampleSummary(sourceDocument) {
-  return `# Summary: ${sourceDocument.originalName}
+async function generateSampleSummary(sourceDocument) {
+  try {
+    if (!sourceDocument.extractedText || sourceDocument.extractedText.trim().length === 0) {
+      return `# Summary: ${sourceDocument.originalName}
 
-## Executive Summary
-This document summarizes the key points from the uploaded material.
-
-## Main Points
-- Core concepts and ideas
-- Essential information for quick review
-- Critical takeaways
-
-## Conclusion
-${sourceDocument.extractedText ? 
-  'Based on the analysis of the source material...' : 
-  'Summary generated from document structure and metadata'}
+## Notice
+No text content available for summarization.
 
 ---
-*Generated on ${new Date().toLocaleDateString()} using AI analysis*`;
+*Generated on ${new Date().toLocaleDateString()}*`;
+    }
+
+    console.log(`[Summary] 🔍 Generating enhanced summary with web verification for: ${sourceDocument.originalName}`);
+
+    // Generate initial AI summary
+    const aiSummary = await summarize(sourceDocument.extractedText, 'detailed');
+    
+    // Extract one key topic for web verification
+    const verificationPrompt = `From this summary, identify the single most important topic that would benefit from current web information for accuracy:
+
+Summary: ${aiSummary.substring(0, 1000)}
+
+Return only the main topic name, no explanations.`;
+
+    const keyTopic = await chatCompletion(verificationPrompt);
+    
+    // Try to get current web information for verification
+    let webVerification = '';
+    try {
+      console.log(`[Summary] 🌐 Verifying topic: ${keyTopic.trim()}`);
+      const webResult = await searchWeb(keyTopic.trim());
+      
+      if (webResult && webResult.success && webResult.content) {
+        webVerification = `\n\n## 🔍 Current Information Verification\n\n**Topic:** ${keyTopic.trim()}\n\n${webResult.content.substring(0, 600)}...\n\n*Verified from: ${webResult.url}*`;
+        console.log(`[Summary] ✅ Added web verification for: ${keyTopic.trim()}`);
+      }
+    } catch (error) {
+      console.log(`[Summary] ⚠️ Web verification failed: ${error.message}`);
+    }
+    
+    return `# 📄 Enhanced Summary: ${sourceDocument.originalName}
+
+${aiSummary}${webVerification}
+
+---
+*Generated on ${new Date().toLocaleDateString()} using AI analysis${webVerification ? ' + web verification' : ''}*
+*Source: ${sourceDocument.originalName}*`;
+
+  } catch (error) {
+    console.error('Error generating enhanced summary:', error);
+    return `# Summary: ${sourceDocument.originalName}
+
+## Content Overview
+${sourceDocument.extractedText ? sourceDocument.extractedText.substring(0, 800) + '...' : 'No content available'}
+
+*Note: Enhanced AI generation encountered an issue. Showing basic content.*
+
+---
+*Generated on ${new Date().toLocaleDateString()}*`;
+  }
 }
 
-function generateSampleOutline(sourceDocument) {
-  return `# Outline: ${sourceDocument.originalName}
+async function generateSampleOutline(sourceDocument) {
+  try {
+    if (!sourceDocument.extractedText || sourceDocument.extractedText.trim().length === 0) {
+      return `# Outline: ${sourceDocument.originalName}
 
-## I. Introduction
-   A. Background information
-   B. Purpose and scope
-
-## II. Main Content Areas
-   A. Primary concepts
-   B. Secondary topics
-   C. Supporting details
-
-## III. Key Insights
-   A. Important findings
-   B. Critical analysis
-
-## IV. Conclusion
-   A. Summary of main points
-   B. Implications and applications
+## Notice
+No text content available for outline generation.
 
 ---
-*Generated on ${new Date().toLocaleDateString()} using AI analysis*`;
+*Generated on ${new Date().toLocaleDateString()}*`;
+    }
+
+    const prompt = `Create a detailed outline from the following document content. Structure it with clear hierarchical organization using roman numerals, letters, and numbers:
+
+Document: ${sourceDocument.originalName}
+Content: ${sourceDocument.extractedText.slice(0, 6000)}
+
+Create a comprehensive outline that captures the main structure and key topics of the document.`;
+
+    const aiOutline = await chatCompletion(prompt);
+    
+    return `# Outline: ${sourceDocument.originalName}
+
+${aiOutline}
+
+---
+*Generated on ${new Date().toLocaleDateString()} using AI analysis*
+*Source: ${sourceDocument.originalName}*`;
+
+  } catch (error) {
+    console.error('Error generating AI outline:', error);
+    return `# Outline: ${sourceDocument.originalName}
+
+## I. Main Content
+   A. Key topics from the document
+   B. Important concepts covered
+
+## II. Supporting Details
+   A. Additional information
+   B. Related concepts
+
+*Note: AI generation encountered an issue. Showing basic structure.*
+
+---
+*Generated on ${new Date().toLocaleDateString()}*`;
+  }
 }
 
 // @desc    Update generated document

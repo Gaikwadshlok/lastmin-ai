@@ -20,6 +20,7 @@ import quizRoutes from './routes/quiz.js';
 import notesRoutes from './routes/notes.js';
 import generatedDocumentRoutes from './routes/generatedDocuments.js';
 import reportRoutes from './routes/report.js';
+import studyModesRoutes from './routes/studyModes.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
@@ -128,6 +129,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/generated-documents', generatedDocumentRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/study', studyModesRoutes);
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve root public directory so generated reports are accessible

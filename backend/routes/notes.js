@@ -1,187 +1,140 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { protect } from '../middleware/auth.js';
+import GeneratedDocument from '../models/GeneratedDocument.js';
+import Document from '../models/Document.js';
 
 const router = express.Router();
 
-// Mock notes storage - in production, this would use MongoDB
-let notes = [
-  {
-    id: '1',
-    title: 'Introduction to Calculus',
-    content: '# Introduction to Calculus\n\nCalculus is a branch of mathematics focused on limits, functions, derivatives, integrals, and infinite series.\n\n## Key Concepts:\n- Derivatives: Rate of change\n- Integrals: Area under curves\n- Limits: Approaching values\n\n## Applications:\n- Physics: Motion and forces\n- Economics: Optimization\n- Engineering: Design and analysis',
-    subject: 'Mathematics',
-    tags: ['calculus', 'derivatives', 'integrals', 'limits'],
-    documentId: null, // Not linked to a document
-    userId: 'user123',
-    isPublic: false,
-    isPinned: true,
-    lastModified: new Date('2024-01-20'),
-    createdAt: new Date('2024-01-15'),
-    wordCount: 89,
-    readingTime: 1, // minutes
-    version: 1,
-    collaborators: [],
-    shareSettings: {
-      allowComments: false,
-      allowEditing: false,
-      expiresAt: null
-    }
-  },
-  {
-    id: '2',
-    title: 'Study Notes - Chapter 5',
-    content: '## Chapter 5: Data Structures\n\n### Arrays\n- Fixed size collection\n- Indexed access: O(1)\n- Insertion/Deletion: O(n)\n\n### Linked Lists\n- Dynamic size\n- Sequential access: O(n)\n- Insertion/Deletion: O(1) at known position\n\n### Trees\n- Hierarchical structure\n- Binary trees, BST, AVL\n- Search: O(log n) for balanced trees',
-    subject: 'Computer Science',
-    tags: ['data-structures', 'arrays', 'linked-lists', 'trees'],
-    documentId: 'doc123',
-    userId: 'user123',
-    isPublic: true,
-    isPinned: false,
-    lastModified: new Date('2024-01-18'),
-    createdAt: new Date('2024-01-18'),
-    wordCount: 67,
-    readingTime: 1,
-    version: 2,
-    collaborators: ['user456'],
-    shareSettings: {
-      allowComments: true,
-      allowEditing: false,
-      expiresAt: new Date('2024-12-31')
-    }
-  }
-];
-
-let noteVersions = [
-  {
-    id: '1',
-    noteId: '2',
-    version: 1,
-    content: '## Chapter 5: Data Structures\n\n### Arrays\n- Fixed size collection\n- Indexed access: O(1)',
-    modifiedBy: 'user123',
-    modifiedAt: new Date('2024-01-18'),
-    changeDescription: 'Initial version'
-  }
-];
-
-// @desc    Get user's notes
-// @route   GET /api/notes
-// @access  Private
-router.get('/', protect, async (req, res, next) => {
+// Get all notes for the authenticated user
+router.get('/', protect, async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      subject,
-      search,
-      tags,
-      documentId,
-      sortBy = 'lastModified',
-      sortOrder = 'desc',
-      isPinned,
-      isPublic
-    } = req.query;
-
-    let userNotes = notes.filter(note => 
-      note.userId === req.user.id || 
-      note.collaborators.includes(req.user.id) ||
-      (note.isPublic && isPublic === 'true')
-    );
-
-    // Apply filters
-    if (subject) {
-      userNotes = userNotes.filter(note => 
-        note.subject.toLowerCase().includes(subject.toLowerCase())
-      );
-    }
-
-    if (search) {
-      userNotes = userNotes.filter(note =>
-        note.title.toLowerCase().includes(search.toLowerCase()) ||
-        note.content.toLowerCase().includes(search.toLowerCase()) ||
-        note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
-      );
-    }
-
-    if (tags) {
-      const tagArray = tags.split(',');
-      userNotes = userNotes.filter(note =>
-        tagArray.some(tag => note.tags.includes(tag.trim()))
-      );
-    }
-
+    const { documentId, subject, tags, limit = 50, page = 1 } = req.query;
+    
+    // Build query
+    const query = {
+      user: req.user.id,
+      generationType: 'notes',
+      isActive: true
+    };
+    
+    // Filter by document if specified
     if (documentId) {
-      userNotes = userNotes.filter(note => note.documentId === documentId);
+      query.sourceDocument = documentId;
     }
-
-    if (isPinned !== undefined) {
-      userNotes = userNotes.filter(note => note.isPinned === (isPinned === 'true'));
+    
+    // Filter by subject if specified
+    if (subject) {
+      query.subject = { $regex: subject, $options: 'i' };
     }
-
-    // Sort notes
-    userNotes.sort((a, b) => {
-      // Always show pinned notes first
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      
-      const aValue = a[sortBy];
-      const bValue = b[sortBy];
-      const order = sortOrder === 'desc' ? -1 : 1;
-      
-      if (aValue < bValue) return -1 * order;
-      if (aValue > bValue) return 1 * order;
-      return 0;
-    });
-
-    // Pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const paginatedNotes = userNotes.slice(startIndex, endIndex);
-
-    // Return summary for list view (not full content)
-    const noteSummaries = paginatedNotes.map(note => ({
-      id: note.id,
-      title: note.title,
-      subject: note.subject,
-      tags: note.tags,
-      documentId: note.documentId,
-      isPublic: note.isPublic,
-      isPinned: note.isPinned,
-      lastModified: note.lastModified,
-      createdAt: note.createdAt,
-      wordCount: note.wordCount,
-      readingTime: note.readingTime,
-      version: note.version,
-      collaborators: note.collaborators,
-      preview: note.content.substring(0, 200) + (note.content.length > 200 ? '...' : ''),
-      isOwner: note.userId === req.user.id
-    }));
-
+    
+    // Filter by tags if specified
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : tags.split(',');
+      query.tags = { $in: tagArray };
+    }
+    
+    const notes = await GeneratedDocument
+      .find(query)
+      .populate('sourceDocument', 'title filename fileType')
+      .sort({ updatedAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    const totalNotes = await GeneratedDocument.countDocuments(query);
+    
     res.json({
       success: true,
       data: {
-        notes: noteSummaries,
+        notes,
         pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(userNotes.length / limit),
-          totalNotes: userNotes.length,
-          hasNext: endIndex < userNotes.length,
-          hasPrev: startIndex > 0
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalNotes,
+          totalPages: Math.ceil(totalNotes / parseInt(limit))
         }
       }
     });
   } catch (error) {
-    next(error);
+    console.error('Get notes error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to fetch notes',
+        type: 'Server Error'
+      }
+    });
   }
 });
 
-// @desc    Get note by ID
-// @route   GET /api/notes/:id
-// @access  Private
-router.get('/:id', protect, async (req, res, next) => {
+// Get notes by document ID
+router.get('/document/:documentId', protect, async (req, res) => {
   try {
-    const note = notes.find(n => n.id === req.params.id);
+    const { documentId } = req.params;
+    
+    // Verify the document exists and belongs to the user
+    const document = await Document.findOne({
+      _id: documentId,
+      user: req.user.id
+    });
+    
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Document not found',
+          type: 'Not Found'
+        }
+      });
+    }
+    
+    const notes = await GeneratedDocument
+      .find({
+        sourceDocument: documentId,
+        user: req.user.id,
+        generationType: 'notes',
+        isActive: true
+      })
+      .populate('sourceDocument', 'title filename fileType')
+      .sort({ updatedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: {
+        notes,
+        document: {
+          id: document._id,
+          title: document.title,
+          filename: document.filename
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get notes by document error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to fetch notes for document',
+        type: 'Server Error'
+      }
+    });
+  }
+});
 
+// Get a specific note by ID
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const note = await GeneratedDocument
+      .findOne({
+        _id: id,
+        user: req.user.id,
+        generationType: 'notes',
+        isActive: true
+      })
+      .populate('sourceDocument', 'title filename fileType extractedText');
+    
     if (!note) {
       return res.status(404).json({
         success: false,
@@ -191,69 +144,46 @@ router.get('/:id', protect, async (req, res, next) => {
         }
       });
     }
-
-    // Check permissions
-    const hasAccess = note.userId === req.user.id || 
-                     note.collaborators.includes(req.user.id) ||
-                     note.isPublic;
-
-    if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Access denied',
-          type: 'Forbidden'
-        }
-      });
-    }
-
+    
     res.json({
       success: true,
-      data: { 
-        note: {
-          ...note,
-          isOwner: note.userId === req.user.id,
-          canEdit: note.userId === req.user.id || 
-                  (note.collaborators.includes(req.user.id) && note.shareSettings.allowEditing)
-        }
-      }
+      data: note
     });
   } catch (error) {
-    next(error);
+    console.error('Get note by ID error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to fetch note',
+        type: 'Server Error'
+      }
+    });
   }
 });
 
-// @desc    Create new note
-// @route   POST /api/notes
-// @access  Private
-router.post('/', protect, [
+// Create new notes linked to a document
+router.post('/generate/:documentId', protect, [
   body('title')
     .notEmpty()
-    .withMessage('Note title is required')
+    .withMessage('Title is required')
     .isLength({ max: 200 })
     .withMessage('Title cannot exceed 200 characters'),
   body('content')
     .notEmpty()
-    .withMessage('Note content is required'),
+    .withMessage('Content is required'),
   body('subject')
     .optional()
-    .isLength({ max: 50 })
-    .withMessage('Subject cannot exceed 50 characters'),
+    .isLength({ max: 100 })
+    .withMessage('Subject cannot exceed 100 characters'),
   body('tags')
     .optional()
     .isArray()
     .withMessage('Tags must be an array'),
-  body('documentId')
+  body('generationPrompt')
     .optional()
-    .isMongoId()
-    .withMessage('Invalid document ID'),
-  body('isPublic')
-    .optional()
-    .isBoolean()
-    .withMessage('isPublic must be a boolean')
-], async (req, res, next) => {
+    .isString()
+], async (req, res) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -265,58 +195,91 @@ router.post('/', protect, [
         }
       });
     }
-
-    const {
-      title,
-      content,
-      subject = 'General',
-      tags = [],
-      documentId = null,
-      isPublic = false,
-      isPinned = false
-    } = req.body;
-
-    // Calculate word count and reading time
-    const wordCount = content.split(/\s+/).length;
+    
+    const { documentId } = req.params;
+    const { title, content, subject, tags = [], generationPrompt } = req.body;
+    
+    // Verify the document exists and belongs to the user
+    const document = await Document.findOne({
+      _id: documentId,
+      user: req.user.id
+    });
+    
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Document not found',
+          type: 'Not Found'
+        }
+      });
+    }
+    
+    // Calculate content analysis
+    const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
     const readingTime = Math.ceil(wordCount / 200); // 200 words per minute
-
-    const newNote = {
-      id: String(notes.length + 1),
+    
+    // Count structure elements
+    const headers = (content.match(/^#+\s/gm) || []).length;
+    const bulletPoints = (content.match(/^[\*\-\+]\s/gm) || []).length;
+    const codeBlocks = (content.match(/```/g) || []).length / 2;
+    const mathEquations = (content.match(/\$.*?\$/g) || []).length;
+    
+    // Create the generated notes
+    const notes = new GeneratedDocument({
       title,
       content,
-      subject,
-      tags: Array.isArray(tags) ? tags : [],
-      documentId,
-      userId: req.user.id,
-      isPublic,
-      isPinned,
-      lastModified: new Date(),
-      createdAt: new Date(),
-      wordCount,
-      readingTime,
-      version: 1,
-      collaborators: [],
-      shareSettings: {
-        allowComments: false,
-        allowEditing: false,
-        expiresAt: null
+      sourceDocument: documentId,
+      generationType: 'notes',
+      generationMethod: generationPrompt ? 'ai-gemini' : 'manual',
+      generationPrompt,
+      user: req.user.id,
+      subject: subject || document.subject || '',
+      tags,
+      analysis: {
+        wordCount,
+        readingTime,
+        structure: {
+          headers,
+          bulletPoints,
+          codeBlocks,
+          mathEquations
+        }
       }
-    };
-
-    notes.push(newNote);
-
+    });
+    
+    await notes.save();
+    
+    // Add the notes reference to the document
+    await Document.findByIdAndUpdate(documentId, {
+      $push: {
+        'generatedMaterials.notes': notes._id
+      },
+      $set: {
+        'stats.lastAccessed': new Date()
+      }
+    });
+    
+    // Populate the source document info
+    await notes.populate('sourceDocument', 'title filename fileType');
+    
     res.status(201).json({
       success: true,
-      data: { note: newNote }
+      data: notes
     });
   } catch (error) {
-    next(error);
+    console.error('Create notes error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to create notes',
+        type: 'Server Error'
+      }
+    });
   }
 });
 
-// @desc    Update note
-// @route   PUT /api/notes/:id
-// @access  Private
+// Update a note
 router.put('/:id', protect, [
   body('title')
     .optional()
@@ -328,15 +291,14 @@ router.put('/:id', protect, [
     .withMessage('Content cannot be empty'),
   body('subject')
     .optional()
-    .isLength({ max: 50 })
-    .withMessage('Subject cannot exceed 50 characters'),
+    .isLength({ max: 100 })
+    .withMessage('Subject cannot exceed 100 characters'),
   body('tags')
     .optional()
     .isArray()
     .withMessage('Tags must be an array')
-], async (req, res, next) => {
+], async (req, res) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -348,259 +310,44 @@ router.put('/:id', protect, [
         }
       });
     }
-
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
-
-    if (noteIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Note not found',
-          type: 'Not Found'
-        }
-      });
-    }
-
-    const note = notes[noteIndex];
-
-    // Check permissions
-    const canEdit = note.userId === req.user.id || 
-                   (note.collaborators.includes(req.user.id) && note.shareSettings.allowEditing);
-
-    if (!canEdit) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Access denied',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    // Save current version if content is being changed
-    if (req.body.content && req.body.content !== note.content) {
-      noteVersions.push({
-        id: String(noteVersions.length + 1),
-        noteId: note.id,
-        version: note.version,
-        content: note.content,
-        modifiedBy: req.user.id,
-        modifiedAt: note.lastModified,
-        changeDescription: req.body.changeDescription || `Version ${note.version}`
-      });
-    }
-
-    // Update note
+    
+    const { id } = req.params;
     const updates = req.body;
-    const updatedNote = { ...note, ...updates };
-
-    // Recalculate word count and reading time if content changed
+    
+    // Calculate new content analysis if content is being updated
     if (updates.content) {
-      updatedNote.wordCount = updates.content.split(/\s+/).length;
-      updatedNote.readingTime = Math.ceil(updatedNote.wordCount / 200);
-      updatedNote.version = note.version + 1;
-    }
-
-    updatedNote.lastModified = new Date();
-
-    notes[noteIndex] = updatedNote;
-
-    res.json({
-      success: true,
-      data: { note: updatedNote }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @desc    Delete note
-// @route   DELETE /api/notes/:id
-// @access  Private
-router.delete('/:id', protect, async (req, res, next) => {
-  try {
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
-
-    if (noteIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Note not found',
-          type: 'Not Found'
+      const wordCount = updates.content.split(/\s+/).filter(word => word.length > 0).length;
+      const readingTime = Math.ceil(wordCount / 200);
+      
+      const headers = (updates.content.match(/^#+\s/gm) || []).length;
+      const bulletPoints = (updates.content.match(/^[\*\-\+]\s/gm) || []).length;
+      const codeBlocks = (updates.content.match(/```/g) || []).length / 2;
+      const mathEquations = (updates.content.match(/\$.*?\$/g) || []).length;
+      
+      updates.analysis = {
+        wordCount,
+        readingTime,
+        structure: {
+          headers,
+          bulletPoints,
+          codeBlocks,
+          mathEquations
         }
-      });
+      };
     }
-
-    const note = notes[noteIndex];
-
-    // Only owner can delete notes
-    if (note.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Only the note owner can delete this note',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    // Remove note and its versions
-    notes.splice(noteIndex, 1);
-    noteVersions = noteVersions.filter(v => v.noteId !== req.params.id);
-
-    res.json({
-      success: true,
-      data: { message: 'Note deleted successfully' }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @desc    Toggle note pin status
-// @route   PATCH /api/notes/:id/pin
-// @access  Private
-router.patch('/:id/pin', protect, async (req, res, next) => {
-  try {
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
-
-    if (noteIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Note not found',
-          type: 'Not Found'
-        }
-      });
-    }
-
-    const note = notes[noteIndex];
-
-    // Only owner can pin/unpin notes
-    if (note.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Only the note owner can pin/unpin this note',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    notes[noteIndex].isPinned = !note.isPinned;
-    notes[noteIndex].lastModified = new Date();
-
-    res.json({
-      success: true,
-      data: { 
-        note: notes[noteIndex],
-        message: `Note ${notes[noteIndex].isPinned ? 'pinned' : 'unpinned'} successfully`
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @desc    Share note / Update sharing settings
-// @route   PATCH /api/notes/:id/share
-// @access  Private
-router.patch('/:id/share', protect, [
-  body('isPublic')
-    .optional()
-    .isBoolean()
-    .withMessage('isPublic must be a boolean'),
-  body('collaborators')
-    .optional()
-    .isArray()
-    .withMessage('Collaborators must be an array'),
-  body('shareSettings.allowComments')
-    .optional()
-    .isBoolean()
-    .withMessage('allowComments must be a boolean'),
-  body('shareSettings.allowEditing')
-    .optional()
-    .isBoolean()
-    .withMessage('allowEditing must be a boolean'),
-  body('shareSettings.expiresAt')
-    .optional()
-    .isISO8601()
-    .withMessage('expiresAt must be a valid date')
-], async (req, res, next) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Validation failed',
-          type: 'Validation Error',
-          details: errors.array()
-        }
-      });
-    }
-
-    const noteIndex = notes.findIndex(n => n.id === req.params.id);
-
-    if (noteIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Note not found',
-          type: 'Not Found'
-        }
-      });
-    }
-
-    const note = notes[noteIndex];
-
-    // Only owner can modify sharing settings
-    if (note.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Only the note owner can modify sharing settings',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    const { isPublic, collaborators, shareSettings } = req.body;
-
-    if (isPublic !== undefined) {
-      notes[noteIndex].isPublic = isPublic;
-    }
-
-    if (collaborators !== undefined) {
-      notes[noteIndex].collaborators = collaborators;
-    }
-
-    if (shareSettings) {
-      notes[noteIndex].shareSettings = { ...note.shareSettings, ...shareSettings };
-    }
-
-    notes[noteIndex].lastModified = new Date();
-
-    res.json({
-      success: true,
-      data: { 
-        note: notes[noteIndex],
-        message: 'Sharing settings updated successfully'
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @desc    Get note versions
-// @route   GET /api/notes/:id/versions
-// @access  Private
-router.get('/:id/versions', protect, async (req, res, next) => {
-  try {
-    const note = notes.find(n => n.id === req.params.id);
-
+    
+    const note = await GeneratedDocument
+      .findOneAndUpdate(
+        {
+          _id: id,
+          user: req.user.id,
+          generationType: 'notes'
+        },
+        updates,
+        { new: true, runValidators: true }
+      )
+      .populate('sourceDocument', 'title filename fileType');
+    
     if (!note) {
       return res.status(404).json({
         success: false,
@@ -610,169 +357,66 @@ router.get('/:id/versions', protect, async (req, res, next) => {
         }
       });
     }
-
-    // Check permissions
-    const hasAccess = note.userId === req.user.id || 
-                     note.collaborators.includes(req.user.id);
-
-    if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          message: 'Access denied',
-          type: 'Forbidden'
-        }
-      });
-    }
-
-    const versions = noteVersions
-      .filter(v => v.noteId === req.params.id)
-      .sort((a, b) => b.version - a.version);
-
-    res.json({
-      success: true,
-      data: { versions }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @desc    Get notes statistics
-// @route   GET /api/notes/stats
-// @access  Private
-router.get('/stats/overview', protect, async (req, res, next) => {
-  try {
-    const userNotes = notes.filter(note => note.userId === req.user.id);
     
-    const stats = {
-      totalNotes: userNotes.length,
-      publicNotes: userNotes.filter(n => n.isPublic).length,
-      pinnedNotes: userNotes.filter(n => n.isPinned).length,
-      totalWordCount: userNotes.reduce((sum, n) => sum + n.wordCount, 0),
-      averageWordCount: userNotes.length > 0 
-        ? Math.round(userNotes.reduce((sum, n) => sum + n.wordCount, 0) / userNotes.length) 
-        : 0,
-      subjectBreakdown: userNotes.reduce((acc, note) => {
-        acc[note.subject] = (acc[note.subject] || 0) + 1;
-        return acc;
-      }, {}),
-      mostUsedTags: userNotes
-        .flatMap(n => n.tags)
-        .reduce((acc, tag) => {
-          acc[tag] = (acc[tag] || 0) + 1;
-          return acc;
-        }, {}),
-      recentActivity: userNotes
-        .sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified))
-        .slice(0, 5)
-        .map(note => ({
-          id: note.id,
-          title: note.title,
-          lastModified: note.lastModified,
-          action: 'modified'
-        }))
-    };
-
     res.json({
       success: true,
-      data: { stats }
+      data: note
     });
   } catch (error) {
-    next(error);
+    console.error('Update note error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to update note',
+        type: 'Server Error'
+      }
+    });
   }
 });
 
-// @desc    Generate notes from document
-// @route   POST /api/notes/generate
-// @access  Private
-router.post('/generate', protect, [
-  body('documentId')
-    .notEmpty()
-    .withMessage('Document ID is required'),
-  body('title')
-    .optional()
-    .isLength({ max: 200 })
-    .withMessage('Title cannot exceed 200 characters')
-], async (req, res, next) => {
+// Delete a note
+router.delete('/:id', protect, async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
+    const { id } = req.params;
+    
+    const note = await GeneratedDocument.findOneAndDelete({
+      _id: id,
+      user: req.user.id,
+      generationType: 'notes'
+    });
+    
+    if (!note) {
+      return res.status(404).json({
         success: false,
         error: {
-          message: 'Validation failed',
-          type: 'Validation Error',
-          details: errors.array()
+          message: 'Note not found',
+          type: 'Not Found'
         }
       });
     }
-
-    const { documentId, title, subject = 'General' } = req.body;
-
-    // In a real implementation, you would:
-    // 1. Fetch the document from the database
-    // 2. Extract text content from the document
-    // 3. Use AI service to generate notes
-    // 4. Save the generated notes to database
-
-    // For now, we'll simulate the process
-    const generatedContent = `# AI-Generated Study Notes
-
-## Overview
-This document contains comprehensive study notes generated from your uploaded file.
-
-## Key Points
-- Important concepts extracted from the document
-- Structured learning materials
-- Summary of main topics
-- Practice questions and examples
-
-## Detailed Analysis
-[Generated content would appear here based on document analysis]
-
-## Conclusion
-These notes provide a structured overview of the material for effective studying.
-`;
-
-    const wordCount = generatedContent.split(/\s+/).length;
-    const readingTime = Math.ceil(wordCount / 200);
-
-    const newNote = {
-      id: String(notes.length + 1),
-      title: title || `Generated Notes - ${new Date().toLocaleDateString()}`,
-      content: generatedContent,
-      subject,
-      tags: ['ai-generated', 'study-notes'],
-      documentId,
-      userId: req.user.id,
-      isPublic: false,
-      isPinned: false,
-      lastModified: new Date(),
-      createdAt: new Date(),
-      wordCount,
-      readingTime,
-      version: 1,
-      collaborators: [],
-      shareSettings: {
-        allowComments: false,
-        allowEditing: false,
-        expiresAt: null
-      }
-    };
-
-    notes.push(newNote);
-
-    res.status(201).json({
+    
+    // Remove the note reference from the source document
+    if (note.sourceDocument) {
+      await Document.findByIdAndUpdate(note.sourceDocument, {
+        $pull: {
+          'generatedMaterials.notes': id
+        }
+      });
+    }
+    
+    res.json({
       success: true,
-      data: { 
-        note: newNote,
-        message: 'Notes generated successfully'
-      }
+      message: 'Note deleted successfully'
     });
   } catch (error) {
-    next(error);
+    console.error('Delete note error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to delete note',
+        type: 'Server Error'
+      }
+    });
   }
 });
 

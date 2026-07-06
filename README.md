@@ -30,14 +30,15 @@ AI-powered study assistant platform built with React 19, Vite, Tailwind CSS, Rad
 src/
    App.jsx
    components/
-      Loader.tsx
-      ProtectedRoute.tsx
-      ErrorBoundary.tsx
-   contexts/AuthContext.tsx
+      Loader.jsx
+      ProtectedRoute.jsx
+      ErrorBoundary.jsx
+   contexts/AuthContext.jsx
    services/ (auth, ai, quiz, notes, upload)
-   hooks/ (useQuizzes, useNotes, useAIChat)
-   config/ (api.js, env.ts)
-   pages/ (Index, Login, Signup, Dashboard, Syllabus, AskAI, Quiz, About, NotFound)
+   hooks/ (useQuizzes.js, useNotes.js, useAIChat.js, use-toast.js)
+   config/ (api.js, env.js)
+   pages/ (Index.jsx, Login.jsx, Signup.jsx, Dashboard.jsx, Syllabus.jsx, AskAI.jsx, Quiz.jsx, NotFound.jsx)
+   lib/ (utils.js)
 ```
 
 ## Environment Variables
@@ -69,13 +70,13 @@ Visit: http://localhost:5173
 4. 401 clears storage & redirects to /login
 
 ## Protected Routes
-Wrap page in `<ProtectedRoute>`. Unauth users redirected.
+Wrap a page in `<ProtectedRoute>`. Unauthenticated users are redirected.
 
 ## Error Handling
 `ErrorBoundary` wraps routes; offers reload/dismiss.
 
 ## React Query Usage
-Hooks encapsulate fetching & caching. Extend easily.
+Hooks encapsulate fetching and caching. Extend them as needed.
 
 ## Future Enhancements
 - Add Vitest + RTL tests
@@ -89,6 +90,8 @@ Internal / Proprietary (update if open sourcing).
 
 ---
 Made for efficient, last-minute learning. 🚀
+
+## Responsive Behavior
 - **Tablet**: Optimized layout with icon navigation
 - **Mobile**: Hamburger menu with touch-friendly interface
 
@@ -115,23 +118,23 @@ Made for efficient, last-minute learning. 🚀
 ```
 src/
 ├── components/          # Reusable UI components
-│   ├── ui/             # Base UI components (Radix)
-│   ├── Header.tsx      # Navigation header
-│   ├── HeroSection.tsx # Homepage hero
-│   ├── Loader.tsx      # Loading screen
+│   ├── ui/              # Base UI components (Radix)
+│   ├── Header.jsx       # Navigation header
+│   ├── HeroSection.jsx  # Homepage hero
+│   ├── Loader.jsx       # Loading screen
 │   └── ...
-├── pages/              # Application pages
-│   ├── Index.tsx       # Homepage
-│   ├── Login.tsx       # Authentication
-│   ├── Dashboard.tsx   # Main dashboard
-│   ├── Syllabus.tsx    # File management
-│   ├── AskAI.tsx       # AI chat
-│   └── Quiz.tsx        # Quiz system
-├── contexts/           # React contexts
-│   └── AuthContext.tsx # Authentication state
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions
-└── main.jsx           # Application entry point
+├── pages/               # Application pages
+│   ├── Index.jsx        # Homepage
+│   ├── Login.jsx        # Authentication
+│   ├── Dashboard.jsx    # Main dashboard
+│   ├── Syllabus.jsx     # File management
+│   ├── AskAI.jsx        # AI chat
+│   └── Quiz.jsx         # Quiz system
+├── contexts/            # React contexts
+│   └── AuthContext.jsx  # Authentication state
+├── hooks/               # Custom React hooks
+├── lib/                 # Utility functions
+└── main.jsx             # Application entry point
 ```
 
 ## 🎨 Customization
@@ -145,8 +148,8 @@ The project uses a custom Tailwind configuration with:
 
 ### Component System
 - Modular component architecture
-- Consistent prop interfaces
-- TypeScript support for better DX
+- Consistent component patterns
+- Plain JavaScript and JSX modules for simplicity
 - Reusable UI patterns
 
 ## 🤝 Contributing

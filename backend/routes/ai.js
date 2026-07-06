@@ -332,6 +332,38 @@ router.post('/web-content', protect, [
   }
 });
 
+// Helper function to get user location from IP
+async function getUserLocation(req) {
+  try {
+    // Get client IP
+    let clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress;
+    if (clientIP && clientIP.includes(',')) {
+      clientIP = clientIP.split(',')[0];
+    }
+    
+    // For local development, use a default location
+    if (!clientIP || clientIP === '127.0.0.1' || clientIP === '::1' || clientIP.startsWith('192.168') || clientIP.startsWith('10.')) {
+      return { city: 'Mumbai', country: 'India', region: 'Maharashtra' };
+    }
+    
+    // Try to get location from IP (using a free service)
+    const locationResponse = await fetch(`http://ipapi.co/${clientIP}/json/`, { timeout: 3000 });
+    if (locationResponse.ok) {
+      const locationData = await locationResponse.json();
+      return {
+        city: locationData.city || 'Mumbai',
+        country: locationData.country_name || 'India',
+        region: locationData.region || 'Maharashtra'
+      };
+    }
+  } catch (error) {
+    console.log('[Location] Error getting location:', error.message);
+  }
+  
+  // Default location
+  return { city: 'Mumbai', country: 'India', region: 'Maharashtra' };
+}
+
 // @desc    Chat with AI using web content for enhanced context
 // @route   POST /api/ai/chat-web
 // @access  Private
@@ -366,8 +398,20 @@ router.post('/chat-web', protect, [
       });
     }
 
-    const { message, context = '', urls = [] } = req.body;
+    let { message, context = '', urls = [] } = req.body;
     console.log(`[AI Route] Chat with web access - URLs: ${urls.length}`);
+
+    // Check if this is a weather query and enhance with user location
+    if (/weather|temperature|forecast|climate|rain|sunny|cloudy/i.test(message)) {
+      const userLocation = await getUserLocation(req);
+      console.log(`[Weather] Detected weather query, user location: ${userLocation.city}, ${userLocation.country}`);
+      
+      // If the message doesn't already specify a location, add the user's location
+      if (!/in\s+\w+|at\s+\w+|\w+\s+weather|weather\s+in/i.test(message)) {
+        message = `${message} in ${userLocation.city}, ${userLocation.region}, ${userLocation.country}`;
+        console.log(`[Weather] Enhanced query: ${message}`);
+      }
+    }
 
     const response = await chatCompletionWithWebAccess(message, context, urls);
 

@@ -102,32 +102,117 @@ export async function fetchWebContentDirect(url) {
   }
 }
 
-// Function to search for current information (simplified)
+// Smart URL mapping for different query types
+const queryMappings = {
+  weather: [
+    'https://weather.com',
+    'https://www.accuweather.com',
+    'https://www.weather.gov'
+  ],
+  news: [
+    'https://www.bbc.com/news',
+    'https://edition.cnn.com',
+    'https://www.reuters.com'
+  ],
+  finance: [
+    'https://finance.yahoo.com',
+    'https://www.marketwatch.com'
+  ],
+  technology: [
+    'https://techcrunch.com',
+    'https://www.theverge.com'
+  ]
+};
+
+// Function to determine query type and get appropriate URLs
+function getRelevantUrls(query) {
+  const lowerQuery = query.toLowerCase();
+  
+  // Weather queries
+  if (lowerQuery.match(/weather|temperature|forecast|rain|sunny|cloudy|climate|storm/)) {
+    return { type: 'weather', urls: queryMappings.weather };
+  }
+  
+  // News queries
+  if (lowerQuery.match(/news|headline|current events|breaking|latest news|happening/)) {
+    return { type: 'news', urls: queryMappings.news };
+  }
+  
+  // Finance queries
+  if (lowerQuery.match(/stock|price|market|finance|investment|crypto|bitcoin/)) {
+    return { type: 'finance', urls: queryMappings.finance };
+  }
+  
+  // Technology queries
+  if (lowerQuery.match(/tech|technology|ai|software|app|digital/)) {
+    return { type: 'technology', urls: queryMappings.technology };
+  }
+  
+  // Default: try news sites for general queries
+  return { type: 'general', urls: queryMappings.news };
+}
+
+// Function to search for current information with automatic website fetching
 export async function searchWeb(query) {
   try {
     console.log(`[WebScraper] 🔍 Searching for: ${query}`);
     
-    // For now, we'll provide a helpful response about web search capability
+    const { type, urls } = getRelevantUrls(query);
+    console.log(`[WebScraper] 📊 Query type detected: ${type}`);
+    
+    // Try to fetch content from the most relevant website
+    let bestResult = null;
+    let attemptedUrls = [];
+    
+    for (const url of urls.slice(0, 2)) { // Try max 2 URLs to avoid timeout
+      try {
+        console.log(`[WebScraper] 🌐 Attempting to fetch from: ${url}`);
+        const result = await fetchWebContentDirect(url);
+        attemptedUrls.push(url);
+        
+        if (result && result.success && result.wordCount > 100) {
+          bestResult = result;
+          console.log(`[WebScraper] ✅ Successfully got content from ${url}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`[WebScraper] ⚠️ Failed to fetch from ${url}: ${error.message}`);
+        continue;
+      }
+    }
+    
+    if (bestResult) {
+      return {
+        ...bestResult,
+        queryType: type,
+        searchQuery: query,
+        content: `Based on current web content from ${bestResult.url}:\n\n${bestResult.content}`
+      };
+    }
+    
+    // If no content was successfully fetched, provide helpful guidance
     return {
-      success: true,
-      title: 'Web Search Results',
+      success: false,
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Information`,
       url: `search:${query}`,
-      content: `I understand you're looking for information about "${query}". While I have direct web scraping capability, I don't have access to search engines like Google. 
-
-To get current information, you could:
-1. Provide a specific URL for me to scrape
-2. Ask me to fetch content from a news website
-3. Use the Chrome extension bridge for more advanced web access
-
-For example, try asking me to "fetch content from https://example.com" with a specific URL.`,
+      content: `I attempted to fetch current ${type} information from websites like ${attemptedUrls.join(', ')}, but encountered access restrictions. \n\nTo get current ${type} information, you can:\n1. Visit ${urls[0]} directly in your browser\n2. Provide me with a specific URL to scrape\n3. Try asking about a specific location or topic\n\nFor example, if you have a specific ${type} URL, ask me to "fetch content from [URL]".`,
+      queryType: type,
+      attemptedUrls,
       wordCount: 50,
       timestamp: new Date().toISOString(),
-      method: 'search-info'
+      method: 'auto-search'
     };
 
   } catch (error) {
     console.error(`[WebScraper] ❌ Search failed:`, error.message);
-    return null;
+    return {
+      success: false,
+      title: 'Search Error',
+      content: `I encountered an error while trying to fetch information: ${error.message}`,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      method: 'auto-search'
+    };
   }
 }
 
@@ -135,5 +220,10 @@ For example, try asking me to "fetch content from https://example.com" with a sp
 export const testUrls = {
   news: 'https://httpbin.org/html',  // Safe test URL
   example: 'https://example.com',
-  httpbin: 'https://httpbin.org/json'
+  httpbin: 'https://httpbin.org/json',
+  weather: 'https://example.com', // For testing weather detection
+  safe: 'https://httpbin.org/html'  // Always accessible for testing
 };
+
+// Export query mappings for testing
+export { queryMappings };

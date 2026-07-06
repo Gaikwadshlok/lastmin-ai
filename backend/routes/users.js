@@ -4,6 +4,18 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
+// Dev-only: Return all users without auth (only when not in production)
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/all-dev', async (req, res, next) => {
+    try {
+      const users = await User.find({}).select('-password');
+      return res.json({ success: true, data: { users } });
+    } catch (error) {
+      next(error);
+    }
+  });
+}
+
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Private/Admin

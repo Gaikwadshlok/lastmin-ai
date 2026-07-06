@@ -108,9 +108,9 @@ export async function chatCompletionWithWebAccess(message, context = '', urls = 
     }
   }
   
-  // If no URLs provided but message seems like it needs web data, try to help
+  // If no URLs provided but message seems like it needs web data, automatically fetch relevant content
   else if (requiresWebSearch(message)) {
-    console.log('[AI] 🔍 Message appears to need web search');
+    console.log('[AI] 🔍 Message appears to need web search - attempting automatic content fetch');
     
     // Check if user is asking for a specific website
     const urlMatch = message.match(/(?:fetch|get|visit|scrape|check)\s+(?:from\s+)?(?:https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/i);
@@ -122,23 +122,30 @@ export async function chatCompletionWithWebAccess(message, context = '', urls = 
       console.log(`[AI] 🎯 Detected URL request: ${url}`);
       
       const content = await fetchWebContent(url);
-      if (content) {
+      if (content && content.content) {
         webContent += `\n\n--- Web Content from ${content.title} ---\n${content.content}\n`;
       }
     } else {
-      // General web search request
+      // Automatically search for relevant web content
+      console.log(`[AI] 🚀 Attempting automatic web search for: ${message}`);
       const searchResult = await searchWeb(message);
-      if (searchResult) {
-        webContent += `\n\n--- Web Search Information ---\n${searchResult.content}\n`;
+      if (searchResult && searchResult.content) {
+        if (searchResult.success) {
+          webContent += `\n\n--- Current Web Information ---\n${searchResult.content}\n`;
+          console.log(`[AI] ✅ Successfully fetched web content for query`);
+        } else {
+          webContent += `\n\n--- Web Access Note ---\n${searchResult.content}\n`;
+          console.log(`[AI] ⚠️ Web content fetch had issues but provided guidance`);
+        }
       }
     }
   }
   
   // Add web content to context
   if (webContent) {
-    enhancedContext += `\n\n=== WEB CONTENT ===\n${webContent}\n=== END WEB CONTENT ===\n\nPlease use this web content to provide accurate and current information in your response.`;
+    enhancedContext += `\n\n=== WEB CONTENT ===\n${webContent}\n=== END WEB CONTENT ===\n\nPlease use this web content to provide accurate and current information in your response. IMPORTANT: Format your response in plain text only - do NOT use any markdown formatting like **, ***, ###, bullet points, or any special characters for emphasis.`;
   } else if (requiresWebSearch(message)) {
-    enhancedContext += `\n\nNote: The user is asking about current/web information, but I wasn't able to fetch current data. Please acknowledge this limitation and provide general information you know, suggesting they provide specific URLs if needed.`;
+    enhancedContext += `\n\nNote: The user is asking about current information (like weather, news, etc.). Since I cannot access real-time data, please provide helpful suggestions for where they can find current information, such as specific websites or apps. Keep your response conversational and in plain text format without any markdown formatting.`;
   }
   
   // Use regular chat completion with enhanced context
@@ -149,8 +156,10 @@ export async function chatCompletionWithWebAccess(message, context = '', urls = 
 function requiresWebSearch(message) {
   const webKeywords = [
     'current', 'latest', 'recent', 'today', 'now', 'update', 'news',
-    'weather', 'price', 'stock', 'trending', 'happening', 'search',
-    'find', 'look up', 'check', 'what is', 'tell me about'
+    'weather', 'temperature', 'forecast', 'climate', 'rain', 'sunny', 'cloudy',
+    'price', 'stock', 'trending', 'happening', 'search',
+    'find', 'look up', 'check', 'what is', 'tell me about',
+    'whats the', 'what\'s the', 'how is the', 'is it', 'will it'
   ];
   
   const lowerMessage = message.toLowerCase();

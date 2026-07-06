@@ -16,7 +16,8 @@ const generatedDocumentSchema = new mongoose.Schema({
   sourceDocument: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Document',
-    required: [true, 'Source document is required']
+    required: false,
+    default: null
   },
   
   // Generation metadata

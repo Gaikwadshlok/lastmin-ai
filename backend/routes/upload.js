@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { protect } from '../middleware/auth.js';
 import Document from '../models/Document.js';
+import { extractTextFromFile, validateExtractedText } from '../utils/textExtraction.js';
 
 const router = express.Router();
 
@@ -97,7 +98,35 @@ router.post('/document', protect, upload.single('document'), async (req, res, ne
         fileType = 'unknown';
     }
 
-    // Create document record
+    // Extract text content from the uploaded file
+    let extractedText = '';
+    let processingStatus = 'pending';
+    
+    try {
+      console.log(`[Upload] 📄 Starting text extraction for ${fileType} file: ${req.file.originalname}`);
+      
+      if (['pdf', 'docx', 'txt'].includes(fileType)) {
+        const rawText = await extractTextFromFile(req.file.path, fileType);
+        const { isValid, cleanText } = validateExtractedText(rawText);
+        
+        if (isValid) {
+          extractedText = cleanText;
+          processingStatus = 'completed';
+          console.log(`[Upload] ✅ Text extraction successful - ${extractedText.length} characters`);
+        } else {
+          processingStatus = 'failed';
+          console.log(`[Upload] ⚠️ Text extraction failed - no meaningful content found`);
+        }
+      } else {
+        processingStatus = 'not_applicable';
+        console.log(`[Upload] ℹ️ Text extraction not applicable for file type: ${fileType}`);
+      }
+    } catch (error) {
+      processingStatus = 'failed';
+      console.error(`[Upload] ❌ Text extraction error:`, error.message);
+    }
+
+    // Create document record with extracted text
     const document = await Document.create({
       title: title || req.file.originalname,
       description: description || '',
@@ -109,19 +138,23 @@ router.post('/document', protect, upload.single('document'), async (req, res, ne
       mimeType: req.file.mimetype,
       user: req.user.id,
       subject: subject || '',
-      tags: tags ? tags.split(',').map(tag => tag.trim()) : []
+      tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+      extractedText: extractedText,
+      processingStatus: processingStatus
     });
 
     // Update user document count
     req.user.studyStats.documentsUploaded += 1;
     await req.user.save();
 
-    // TODO: Process file in background (extract text, analyze content)
-    // This would be implemented with a job queue like Bull or agenda
+    console.log(`[Upload] 📊 Document created with processing status: ${processingStatus}`);
+    if (extractedText.length > 0) {
+      console.log(`[Upload] 📝 Extracted text preview: ${extractedText.substring(0, 200)}...`);
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Document uploaded successfully',
+      message: 'Document uploaded and processed successfully',
       data: {
         document: {
           id: document._id,
@@ -135,7 +168,9 @@ router.post('/document', protect, upload.single('document'), async (req, res, ne
           subject: document.subject,
           tags: document.tags,
           processingStatus: document.processingStatus,
-          uploadedAt: document.uploadedAt
+          uploadedAt: document.uploadedAt,
+          hasExtractedText: extractedText.length > 0,
+          extractedTextLength: extractedText.length
         }
       }
     });
@@ -276,6 +311,93 @@ router.put('/documents/:id', protect, async (req, res, next) => {
       message: 'Document updated successfully',
       data: { document }
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @desc    Re-process document text extraction
+// @route   POST /api/upload/documents/:id/reprocess
+// @access  Private
+router.post('/documents/:id/reprocess', protect, async (req, res, next) => {
+  try {
+    const document = await Document.findById(req.params.id);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Document not found',
+          type: 'Not Found'
+        }
+      });
+    }
+
+    // Check if user owns the document
+    if (document.user.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Access denied',
+          type: 'Forbidden'
+        }
+      });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(document.filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Original file not found on server',
+          type: 'Not Found'
+        }
+      });
+    }
+
+    // Re-extract text
+    let extractedText = '';
+    let processingStatus = 'pending';
+    
+    try {
+      console.log(`[Reprocess] 🔄 Re-extracting text for: ${document.originalName}`);
+      
+      if (['pdf', 'docx', 'txt'].includes(document.fileType)) {
+        const rawText = await extractTextFromFile(document.filePath, document.fileType);
+        const { isValid, cleanText } = validateExtractedText(rawText);
+        
+        if (isValid) {
+          extractedText = cleanText;
+          processingStatus = 'completed';
+          console.log(`[Reprocess] ✅ Re-extraction successful - ${extractedText.length} characters`);
+        } else {
+          processingStatus = 'failed';
+          console.log(`[Reprocess] ⚠️ Re-extraction failed - no meaningful content found`);
+        }
+      } else {
+        processingStatus = 'not_applicable';
+      }
+    } catch (error) {
+      processingStatus = 'failed';
+      console.error(`[Reprocess] ❌ Re-extraction error:`, error.message);
+    }
+
+    // Update document with new extracted text
+    document.extractedText = extractedText;
+    document.processingStatus = processingStatus;
+    document.lastModified = new Date();
+    await document.save();
+
+    res.json({
+      success: true,
+      message: 'Document reprocessed successfully',
+      data: {
+        processingStatus,
+        hasExtractedText: extractedText.length > 0,
+        extractedTextLength: extractedText.length
+      }
+    });
+
   } catch (error) {
     next(error);
   }
