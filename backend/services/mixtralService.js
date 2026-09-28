@@ -9,9 +9,9 @@ class MixtralService {
   loadConfig() {
     this.apiKey = process.env.MIXTRAL_API_KEY;
     this.baseURL = process.env.MIXTRAL_API_URL || 'https://api.mistral.ai/v1';
-    this.model = process.env.MIXTRAL_MODEL || 'mistral-large-latest';
+    this.model = process.env.MIXTRAL_MODEL || 'ministral-8b-latest';
     this.temperature = parseFloat(process.env.TEMPERATURE) || 0.7;
-    this.maxTokens = parseInt(process.env.MAX_TOKENS) || 1000;
+    this.maxTokens = parseInt(process.env.MAX_TOKENS) || 4096;
     
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -19,7 +19,7 @@ class MixtralService {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 30000 // 30 second timeout
+      timeout: 60000 // 60 second timeout
     });
   }
 

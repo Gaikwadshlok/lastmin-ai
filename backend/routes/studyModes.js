@@ -110,15 +110,19 @@ Topic: ${topic}`;
     // Use web access for more current and comprehensive information
     const response = await chatCompletionWithWebAccess(prompt, '', []);
     
+    const notesContent = typeof response === 'string'
+      ? response
+      : (response?.data?.response || response?.data?.data?.response || response?.response || JSON.stringify(response));
+
     res.json({
       success: true,
       data: {
-        notes: response.data?.response || response.data?.data?.response || response,
+        notes: notesContent,
         topic,
         subject,
         level,
         timestamp: new Date().toISOString(),
-        wordCount: (response.data?.response || response.data?.data?.response || response).split(' ').length
+        wordCount: notesContent ? notesContent.split(/\s+/).filter(Boolean).length : 0
       }
     });
 
@@ -183,15 +187,19 @@ ${notes}`;
 
     const response = await chatCompletion(prompt, '');
     
+    const questionBankContent = typeof response === 'string'
+      ? response
+      : (response?.data?.response || response?.response || JSON.stringify(response));
+
     res.json({
       success: true,
       data: {
-        questionBank: response.data?.response || response,
+        questionBank: questionBankContent,
         questionCount,
         questionTypes,
         difficulty,
         timestamp: new Date().toISOString(),
-        sourceWordCount: notes.split(' ').length
+        sourceWordCount: typeof notes === 'string' ? notes.split(/\s+/).filter(Boolean).length : 0
       }
     });
 

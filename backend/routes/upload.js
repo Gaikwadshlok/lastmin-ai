@@ -170,8 +170,10 @@ router.post('/document', protect, upload.single('document'), async (req, res, ne
           processingStatus: document.processingStatus,
           uploadedAt: document.uploadedAt,
           hasExtractedText: extractedText.length > 0,
-          extractedTextLength: extractedText.length
-        }
+          extractedTextLength: extractedText.length,
+          extractedText: extractedText
+        },
+        extractedText: extractedText
       }
     });
   } catch (error) {

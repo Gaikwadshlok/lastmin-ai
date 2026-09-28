@@ -9,7 +9,7 @@ export const studyModesService = {
 
   // Generate Topic Notes
   generateNotes: (topic, options = {}) => {
-    const { subject, level = 'intermediate', includeExamples = true } = options;
+    const { subject, level = options.difficulty || 'intermediate', includeExamples = true } = options;
     return apiClient
       .post('/study/generate-notes', { topic, subject, level, includeExamples })
       .then((r) => r.data);

@@ -6,6 +6,10 @@ export const generatedDocumentService = {
   // Get user's generated documents
   getGeneratedDocuments: (params = {}) => apiClient.get('/generated-documents', { params }),
 
+  // Get notes specifically
+  getNotes: (params = {}) =>
+    apiClient.get('/generated-documents', { params: { ...params, generationType: 'notes' } }),
+
   // Get generated document by ID
   getGeneratedDocument: (id) => apiClient.get(`/generated-documents/${id}`),
 

@@ -138,27 +138,57 @@ const Syllabus = () => {
             const formData = new FormData();
             formData.append('document', uploadedFile);
             const uploadRes = await uploadService.uploadDocument(formData);
-            const documentId = uploadRes.data?.data?.document?.id || uploadRes.data?.document?.id;
-            // 2. Request AI analysis / summary
-            // Prefer analyzeDocument if full content, else summary
-            const textForAI = uploadRes.data?.data?.extractedText || uploadRes.data?.extractedText || '';
+            const docData = uploadRes.data?.data?.document || uploadRes.data?.document || {};
+            const documentId = docData.id || docData._id;
+            const textForAI = uploadRes.data?.data?.extractedText || docData.extractedText || '';
+
+            // 2. Generate comprehensive study notes
             let aiText = '';
-            if (textForAI) {
-                const analyzeRes = await aiService.analyzeDocument(textForAI, documentId);
-                aiText = analyzeRes.data?.data?.analysis || JSON.stringify(analyzeRes.data, null, 2);
+            if (documentId) {
+                try {
+                    const genRes = await generatedDocumentService.generateDocument({
+                        sourceDocumentId: documentId,
+                        generationType: 'notes',
+                        title: `Study Notes - ${uploadedFile.name}`,
+                        subject: 'General'
+                    });
+                    const genDoc = genRes.data?.data?.document || genRes.data?.document || genRes.data;
+                    aiText = typeof genDoc?.content === 'string' ? genDoc.content : (typeof genDoc === 'string' ? genDoc : '');
+                } catch (genErr) {
+                    console.warn('Document generation service failed, falling back:', genErr);
+                }
             }
-            else {
-                // Fallback: ask for summary based on file name if no extracted text provided
-                const summaryRes = await aiService.generateSummary(uploadedFile.name, 'detailed');
-                aiText = summaryRes.data?.data?.summary || JSON.stringify(summaryRes.data, null, 2);
+
+            // Fallback if needed
+            if (!aiText) {
+                if (textForAI) {
+                    const analyzeRes = await aiService.analyzeDocument(textForAI, documentId);
+                    const analysis = analyzeRes.data?.data?.analysis || analyzeRes.data?.analysis;
+                    aiText = typeof analysis === 'string' ? analysis : (analysis?.analysis || JSON.stringify(analysis, null, 2));
+                }
+                else {
+                    const summaryRes = await aiService.generateSummary(uploadedFile.name, 'detailed');
+                    const summary = summaryRes.data?.data?.summary || summaryRes.data?.summary;
+                    aiText = typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2);
+                }
             }
+
             setProgress(100);
             setNotesResult(aiText);
+            toast({
+                title: "Notes Generated",
+                description: "Study notes are ready! You can preview or access them in your Notes."
+            });
         }
         catch (e) {
             console.error('Generate notes error', e);
             const msg = e.response?.data?.error?.message || e.message || 'Failed to generate notes';
             setError(msg);
+            toast({
+                variant: "destructive",
+                title: "Generation Failed",
+                description: msg
+            });
         }
         finally {
             stopSim();
@@ -169,7 +199,7 @@ const Syllabus = () => {
     const markdownToHtml = (text) => {
         if (!text)
             return '';
-        let html = text;
+        let html = typeof text === 'string' ? text : (text?.content || text?.analysis || JSON.stringify(text, null, 2));
         html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         html = html.replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre class="code-block">$1</pre>');
         html = html.replace(/^[-*_]{3,}$/gm, '<hr>');
@@ -383,10 +413,12 @@ const Syllabus = () => {
                 description: `Generated comprehensive notes for "${topic}"`
             });
         }
-        catch {
+        catch (err) {
+            console.error('Topic notes error:', err);
+            const msg = err.response?.data?.message || err.message || "Failed to generate notes";
             toast({
                 title: "Error",
-                description: "Failed to generate notes",
+                description: msg,
                 variant: "destructive"
             });
         }

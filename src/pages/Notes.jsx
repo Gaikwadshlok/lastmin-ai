@@ -7,20 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from '@/components/Header';
-import { useNotes } from '@/hooks/useNotes';
 import { uploadService } from '@/services/uploadService';
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import { notesService } from '@/services/notesService';
 import { generatedDocumentService } from '@/services/generatedDocumentService';
 const Notes = () => {
     const [activeTab, setActiveTab] = useState('notes');
-    // Fetch notes from the original notes API
-    const { data: notesData, isLoading: notesLoading, error: notesError, refetch: refetchNotes } = useNotes();
     // Fetch generated documents from Study Hub
-    const { data: generatedDocsData, isLoading: generatedDocsLoading, refetch: refetchGeneratedDocs } = useQuery({
+    const { data: generatedDocsData, isLoading: generatedDocsLoading, error: docsError, refetch: refetchGeneratedDocs } = useQuery({
         queryKey: ['generatedDocuments'],
-        queryFn: () => generatedDocumentService.getGeneratedDocuments().then(r => {
+        queryFn: () => generatedDocumentService.getGeneratedDocuments({ limit: 100 }).then(r => {
             const data = r.data?.data || r.data;
             return data;
         }),
@@ -32,43 +28,19 @@ const Notes = () => {
         queryFn: () => uploadService.getUserDocuments().then(r => r.data.data || r.data),
         retry: false
     });
-    // Merge notes and generated documents, and deduplicate by _id
-    const originalNotes = notesData?.notes || [];
-    const generatedDocs = generatedDocsData?.documents || generatedDocsData?.generatedDocuments || (Array.isArray(generatedDocsData) ? generatedDocsData : []);
-    // Deduplicate notes since both endpoints return documents from the GeneratedDocument collection
-    const allNotes = [...originalNotes, ...generatedDocs];
-    const notesMap = new Map();
-    allNotes.forEach(note => {
-        const id = note._id || note.id;
-        if (id && !notesMap.has(id)) {
-            notesMap.set(id, note);
-        }
-    });
-    const notes = Array.from(notesMap.values());
+    const notes = generatedDocsData?.documents || generatedDocsData?.generatedDocuments || (Array.isArray(generatedDocsData) ? generatedDocsData : []);
     const documents = documentsData?.documents || [];
-    const loading = notesLoading || documentsLoading || generatedDocsLoading;
-    const error = notesError;
-    // Combined refetch function for both data sources
+    const loading = documentsLoading || generatedDocsLoading;
+    const error = docsError;
     const refetchAllNotes = () => {
-        refetchNotes();
         refetchGeneratedDocs();
     };
-    // Handle note deletion - determine if it's original note or generated document
+    // Handle note deletion
     const handleDeleteNote = async (noteId) => {
         if (confirm('Are you sure you want to delete this item?')) {
             try {
-                // Check if it's a generated document (has generationType field) or original note
-                const item = notes.find(n => n._id === noteId || n.id === noteId);
-                if (item?.generationType) {
-                    // It's a generated document from Study Hub
-                    await generatedDocumentService.deleteGeneratedDocument(noteId);
-                }
-                else {
-                    // It's an original note
-                    await notesService.deleteNote(noteId);
-                }
-                // Refetch BOTH data sources since they overlap in the UI
-                refetchAllNotes();
+                await generatedDocumentService.deleteGeneratedDocument(noteId);
+                refetchGeneratedDocs();
                 toast({
                     title: "Success",
                     description: "Item deleted successfully."
