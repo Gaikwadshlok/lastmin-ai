@@ -1,114 +1,34 @@
 // Study Modes Service - Question Banks, Topic Notes, Notes to Questions
-import { apiConfig } from '@/config/api.js';
+// src/services/studyModesService.js
+import apiClient from './apiClient.js';
 
 export const studyModesService = {
   // Answer Question Bank
-  async answerQuestions(questions, context = '') {
-    try {
-      const response = await fetch(`${apiConfig.baseURL}/study/answer-questions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ questions, context })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get answers');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Question answering error:', error);
-      throw error;
-    }
-  },
+  answerQuestions: (questions, context = '') =>
+    apiClient.post('/study/answer-questions', { questions, context }).then((r) => r.data),
 
   // Generate Topic Notes
-  async generateNotes(topic, options = {}) {
-    try {
-      const { subject, level = 'intermediate', includeExamples = true } = options;
-      
-      const response = await fetch(`${apiConfig.baseURL}/study/generate-notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ 
-          topic, 
-          subject, 
-          level, 
-          includeExamples 
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate notes');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Notes generation error:', error);
-      throw error;
-    }
+  generateNotes: (topic, options = {}) => {
+    const { subject, level = 'intermediate', includeExamples = true } = options;
+    return apiClient
+      .post('/study/generate-notes', { topic, subject, level, includeExamples })
+      .then((r) => r.data);
   },
 
   // Generate Questions from Notes
-  async generateQuestionsFromNotes(notes, options = {}) {
-    try {
-      const { 
-        questionTypes = ['mcq', 'short', 'long'], 
-        questionCount = 10, 
-        difficulty = 'mixed' 
-      } = options;
-      
-      const response = await fetch(`${apiConfig.baseURL}/study/notes-to-questions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ 
-          notes, 
-          questionTypes, 
-          questionCount, 
-          difficulty 
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate questions');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Question generation error:', error);
-      throw error;
-    }
+  generateQuestionsFromNotes: (notes, options = {}) => {
+    const {
+      questionTypes = ['mcq', 'short', 'long'],
+      questionCount = 10,
+      difficulty = 'mixed',
+    } = options;
+    return apiClient
+      .post('/study/notes-to-questions', { notes, questionTypes, questionCount, difficulty })
+      .then((r) => r.data);
   },
 
   // Get Study Mode Templates
-  async getTemplates() {
-    try {
-      const response = await fetch(`${apiConfig.baseURL}/study/templates`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch templates');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Templates fetch error:', error);
-      throw error;
-    }
-  }
+  getTemplates: () => apiClient.get('/study/templates').then((r) => r.data),
 };
 
 export default studyModesService;

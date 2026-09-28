@@ -1,68 +1,55 @@
 // Generated Document Service
 // src/services/generatedDocumentService.js
-import axios from 'axios';
-import API_BASE_URL from '../config/api.js';
-
-const generatedDocAPI = axios.create({
-  baseURL: `${API_BASE_URL}/generated-documents`,
-  timeout: 15000,
-});
-
-// Add auth token to requests
-generatedDocAPI.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import apiClient from './apiClient.js';
 
 export const generatedDocumentService = {
   // Get user's generated documents
-  getGeneratedDocuments: (params = {}) => generatedDocAPI.get('/', { params }),
-  
+  getGeneratedDocuments: (params = {}) => apiClient.get('/generated-documents', { params }),
+
   // Get generated document by ID
-  getGeneratedDocument: (id) => generatedDocAPI.get(`/${id}`),
-  
+  getGeneratedDocument: (id) => apiClient.get(`/generated-documents/${id}`),
+
   // Generate document from source
-  generateDocument: (data) => generatedDocAPI.post('/generate', data),
-  
+  generateDocument: (data) => apiClient.post('/generated-documents/generate', data),
+
   // Update generated document
-  updateGeneratedDocument: (id, data) => generatedDocAPI.put(`/${id}`, data),
-  
+  updateGeneratedDocument: (id, data) => apiClient.put(`/generated-documents/${id}`, data),
+
   // Delete generated document
-  deleteGeneratedDocument: (id) => generatedDocAPI.delete(`/${id}`),
-  
+  deleteGeneratedDocument: (id) => apiClient.delete(`/generated-documents/${id}`),
+
   // Get documents by source document
-  getBySourceDocument: (sourceDocId) => generatedDocAPI.get(`/source/${sourceDocId}`),
-  
+  getBySourceDocument: (sourceDocId) => apiClient.get(`/generated-documents/source/${sourceDocId}`),
+
   // Toggle pin status
-  togglePin: (id) => generatedDocAPI.patch(`/${id}/pin`),
-  
+  togglePin: (id) => apiClient.patch(`/generated-documents/${id}/pin`),
+
   // Update sharing settings
-  updateSharing: (id, shareSettings) => generatedDocAPI.patch(`/${id}/share`, shareSettings),
-  
+  updateSharing: (id, shareSettings) => apiClient.patch(`/generated-documents/${id}/share`, shareSettings),
+
   // Get document versions
-  getVersions: (id) => generatedDocAPI.get(`/${id}/versions`),
-  
+  getVersions: (id) => apiClient.get(`/generated-documents/${id}/versions`),
+
   // Create new version
-  createVersion: (id, changeDescription) => generatedDocAPI.post(`/${id}/versions`, { changeDescription }),
-  
+  createVersion: (id, changeDescription) =>
+    apiClient.post(`/generated-documents/${id}/versions`, { changeDescription }),
+
   // Rate document
-  rateDocument: (id, rating) => generatedDocAPI.patch(`/${id}/rate`, { rating }),
-  
+  rateDocument: (id, rating) => apiClient.patch(`/generated-documents/${id}/rate`, { rating }),
+
   // Get statistics
-  getStats: () => generatedDocAPI.get('/stats'),
-  
+  getStats: () => apiClient.get('/generated-documents/stats'),
+
   // Bulk operations
-  bulkDelete: (ids) => generatedDocAPI.post('/bulk/delete', { ids }),
-  bulkUpdateTags: (ids, tags) => generatedDocAPI.post('/bulk/update-tags', { ids, tags }),
-  
+  bulkDelete: (ids) => apiClient.post('/generated-documents/bulk/delete', { ids }),
+  bulkUpdateTags: (ids, tags) => apiClient.post('/generated-documents/bulk/update-tags', { ids, tags }),
+
   // Export document
-  exportDocument: (id, format = 'pdf') => generatedDocAPI.get(`/${id}/export`, {
-    params: { format },
-    responseType: 'blob'
-  }),
+  exportDocument: (id, format = 'pdf') =>
+    apiClient.get(`/generated-documents/${id}/export`, {
+      params: { format },
+      responseType: 'blob',
+    }),
 };
 
 export default generatedDocumentService;

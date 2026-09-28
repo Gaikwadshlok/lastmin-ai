@@ -1,44 +1,33 @@
 // Upload Service
 // src/services/uploadService.js
-import axios from 'axios';
-import API_BASE_URL from '../config/api.js';
+import apiClient from './apiClient.js';
 
-const uploadAPI = axios.create({
-  baseURL: `${API_BASE_URL}/upload`,
-  timeout: 30000, // Longer timeout for file uploads
-});
-
-// Add auth token to requests
-uploadAPI.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Upload requests get a longer timeout
+const UPLOAD_TIMEOUT = 30000;
 
 export const uploadService = {
   // Upload document
-  uploadDocument: (formData) => uploadAPI.post('/document', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
-  
+  uploadDocument: (formData) =>
+    apiClient.post('/upload/document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+    }),
+
   // Get user's documents
-  getUserDocuments: (params = {}) => uploadAPI.get('/documents', { params }),
-  
+  getUserDocuments: (params = {}) => apiClient.get('/upload/documents', { params }),
+
   // Get document by ID
-  getDocument: (id) => uploadAPI.get(`/documents/${id}`),
-  
+  getDocument: (id) => apiClient.get(`/upload/documents/${id}`),
+
   // Delete document
-  deleteDocument: (id) => uploadAPI.delete(`/documents/${id}`),
-  
+  deleteDocument: (id) => apiClient.delete(`/upload/documents/${id}`),
+
   // Download document
-  downloadDocument: (id) => uploadAPI.get(`/documents/${id}/download`, {
-    responseType: 'blob'
-  }),
-  
+  downloadDocument: (id) =>
+    apiClient.get(`/upload/documents/${id}/download`, { responseType: 'blob' }),
+
   // Reprocess document text extraction
-  reprocessDocument: (id) => uploadAPI.post(`/documents/${id}/reprocess`),
+  reprocessDocument: (id) => apiClient.post(`/upload/documents/${id}/reprocess`),
 };
 
 export default uploadService;

@@ -1,41 +1,26 @@
 // Quiz Service
 // src/services/quizService.js
-import axios from 'axios';
-import API_BASE_URL from '../config/api.js';
-
-const quizAPI = axios.create({
-  baseURL: `${API_BASE_URL}/quiz`,
-  timeout: 15000,
-});
-
-// Add auth token to requests
-quizAPI.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import apiClient from './apiClient.js';
 
 export const quizService = {
   // Get all quizzes
-  getQuizzes: (params = {}) => quizAPI.get('/', { params }),
-  
+  getQuizzes: (params = {}) => apiClient.get('/quiz', { params }),
+
   // Get quiz by ID
-  getQuiz: (id) => quizAPI.get(`/${id}`),
-  
+  getQuiz: (id) => apiClient.get(`/quiz/${id}`),
+
   // Create new quiz
-  createQuiz: (quizData) => quizAPI.post('/', quizData),
-  
+  createQuiz: (quizData) => apiClient.post('/quiz', quizData),
+
   // Submit quiz attempt
-  submitQuiz: (quizId, answers, timeSpent = 0) => 
-    quizAPI.post(`/${quizId}/submit`, { answers, timeSpent }),
-  
+  submitQuiz: (quizId, answers, timeSpent = 0) =>
+    apiClient.post(`/quiz/${quizId}/submit`, { answers, timeSpent }),
+
   // Get user's quiz attempts
-  getUserAttempts: (params = {}) => quizAPI.get('/attempts/me', { params }),
-  
+  getUserAttempts: (params = {}) => apiClient.get('/quiz/attempts/me', { params }),
+
   // Get quiz statistics
-  getQuizStats: (quizId) => quizAPI.get(`/${quizId}/stats`),
+  getQuizStats: (quizId) => apiClient.get(`/quiz/${quizId}/stats`),
 };
 
 export default quizService;

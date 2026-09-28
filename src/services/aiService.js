@@ -1,51 +1,29 @@
 // AI Service
 // src/services/aiService.js
-import axios from 'axios';
-import API_BASE_URL from '../config/api.js';
+import apiClient from './apiClient.js';
 
-const aiAPI = axios.create({
-  baseURL: `${API_BASE_URL}/ai`,
-  timeout: 30000,
-});
-
-// Add auth token to requests
-aiAPI.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// AI requests get a longer timeout
+const AI_TIMEOUT = 30000;
 
 export const aiService = {
   // Chat with AI
-  chat: (message, context = '') => aiAPI.post('/chat', { 
-    message, 
-    context 
-  }),
-  
+  chat: (message, context = '') =>
+    apiClient.post('/ai/chat', { message, context }, { timeout: AI_TIMEOUT }),
+
   // Analyze document content
-  analyzeDocument: (text, documentId = null) => aiAPI.post('/analyze', { 
-    text, 
-    documentId 
-  }),
-  
+  analyzeDocument: (text, documentId = null) =>
+    apiClient.post('/ai/analyze', { text, documentId }, { timeout: AI_TIMEOUT }),
+
   // Generate summary
-  generateSummary: (text, type = 'detailed') => aiAPI.post('/summarize', { 
-    text, 
-    type 
-  }),
-  
+  generateSummary: (text, type = 'detailed') =>
+    apiClient.post('/ai/summarize', { text, type }, { timeout: AI_TIMEOUT }),
+
   // Generate quiz questions
-  generateQuiz: (text, questionCount = 5, difficulty = 'mixed') => 
-    aiAPI.post('/generate-quiz', { 
-      text, 
-      questionCount, 
-      difficulty 
-    }),
-    
+  generateQuiz: (text, questionCount = 5, difficulty = 'mixed') =>
+    apiClient.post('/ai/generate-quiz', { text, questionCount, difficulty }, { timeout: AI_TIMEOUT }),
+
   // Get AI usage statistics
-  getUsage: () => aiAPI.get('/usage'),
+  getUsage: () => apiClient.get('/ai/usage'),
 };
 
 export default aiService;
