@@ -1,14 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Lightbulb, Calculator, Atom, Database, BookOpen, PenTool, Clock, Target } from "lucide-react";
 import Header from "@/components/Header";
 import ChatBot from "@/components/ChatBot";
 const AskAI = () => {
-    // Local state kept for suggestion chips input prefill (ChatBot manages sending)
-    const [message, setMessage] = useState('');
-    const [isTyping] = useState(false);
     const quickActions = [
         {
             icon: Lightbulb,
@@ -51,28 +47,6 @@ const AskAI = () => {
             description: 'Target specific exam topics and questions'
         }
     ];
-    const suggestionChips = [
-        'Explain quantum mechanics basics',
-        'Help with calculus derivatives',
-        'Organic chemistry reactions',
-        'Data structures concepts'
-    ];
-    const handleSendMessage = () => {
-        // Deprecated local sender – ChatBot handles sending.
-        // We only keep this to clear the local input used by chips.
-        if (!message.trim())
-            return;
-        setMessage('');
-    };
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    };
-    const handleSuggestionClick = (suggestion) => {
-        setMessage(suggestion);
-    };
     return (_jsxs("div", { className: "min-h-screen bg-gradient-cosmic pt-16 sm:pt-20", children: [_jsx(Header, {}), _jsx("div", { className: "container mx-auto px-4 py-6 sm:py-8 lg:py-12", children: _jsxs(motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6 }, className: "max-w-4xl mx-auto", children: [_jsxs(motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6, delay: 0.1 }, className: "text-center mb-12", children: [_jsx("h1", { className: "text-4xl md:text-5xl font-bold text-white mb-4", children: "AI Study Assistant" }), _jsx("p", { className: "text-xl text-gray-300 max-w-2xl mx-auto", children: "Get instant help with your doubts. Ask questions about your syllabus and get detailed explanations." })] }), _jsx(motion.div, { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay: 0.2 }, children: _jsx(ChatBot, {}) }), _jsxs(motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6, delay: 0.3 }, className: "mb-8 mt-12", children: [_jsx("h2", { className: "text-2xl font-bold text-white mb-6", children: "Quick actions:" }), _jsx("style", { children: `
                 @keyframes marquee-infinite {
                   from { transform: translateX(0); }

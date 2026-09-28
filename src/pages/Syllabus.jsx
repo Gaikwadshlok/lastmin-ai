@@ -187,7 +187,7 @@ const Syllabus = () => {
         html = html.replace(/^(Expected\s+Answer[:.]\s*)(.+)$/gm, '<div class="answer"><span class="a-label">$1</span>$2</div>');
         html = html.replace(/^([a-dA-D]\))\s+(.+)$/gm, '<div class="mcq-option"><span class="option-letter">$1</span> $2</div>');
         html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<div class="numbered-item"><span class="num">$1.</span> $2</div>');
-        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<div class="bullet-item">$1</div>');
+        html = html.replace(/^[-*]\s+(.+)$/gm, '<div class="bullet-item">$1</div>');
         html = html.replace(/\n\n+/g, '</p><p>');
         html = html.replace(/\n/g, '<br>');
         html = '<p>' + html + '</p>';
@@ -319,7 +319,7 @@ const Syllabus = () => {
                 description: `Generated answers for ${questions.length} questions`
             });
         }
-        catch (error) {
+        catch {
             toast({
                 title: "Error",
                 description: "Failed to generate answers",
@@ -383,7 +383,7 @@ const Syllabus = () => {
                 description: `Generated comprehensive notes for "${topic}"`
             });
         }
-        catch (error) {
+        catch {
             toast({
                 title: "Error",
                 description: "Failed to generate notes",
@@ -448,7 +448,7 @@ const Syllabus = () => {
                 description: `Generated ${questionCount} questions from your notes`
             });
         }
-        catch (error) {
+        catch {
             toast({
                 title: "Error",
                 description: "Failed to generate questions",

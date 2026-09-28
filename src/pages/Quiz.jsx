@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Target, Clock, Play, FileText, File, Upload, BookOpen, CheckCircle2, XCircle, ArrowLeft, ArrowRight, RefreshCw, Lightbulb } from "lucide-react";
 import Header from "@/components/Header";
-import { useAuth } from '@/contexts/AuthContext';
 import { uploadService } from '@/services/uploadService';
 import { generatedDocumentService } from '@/services/generatedDocumentService';
 import { aiService } from '@/services/aiService';
 const Quiz = () => {
-    const { user } = useAuth();
     const [currentView, setCurrentView] = useState('selection'); // 'selection', 'quiz', 'results'
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [quizSettings, setQuizSettings] = useState({
@@ -28,7 +26,6 @@ const Quiz = () => {
     const [quizResults, setQuizResults] = useState(null);
     const [loading, setLoading] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(0);
-    const [quizStartTime, setQuizStartTime] = useState(null);
     const [notes, setNotes] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState([]);
     // Timer effect
@@ -214,7 +211,7 @@ const Quiz = () => {
                                                     quizResults.correctAnswers / quizResults.totalQuestions >= 0.6 ? '👏' : '📚' })] }), _jsx(Card, { className: "bg-card/95 border border-white/10 mb-8", children: _jsxs(CardContent, { className: "p-8 text-center", children: [_jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-8 mb-8", children: [_jsxs("div", { children: [_jsx("div", { className: "text-3xl font-bold text-green-400 mb-2", children: quizResults.correctAnswers }), _jsx("div", { className: "text-gray-300", children: "Correct Answers" })] }), _jsxs("div", { children: [_jsx("div", { className: "text-3xl font-bold text-red-400 mb-2", children: quizResults.totalQuestions - quizResults.correctAnswers }), _jsx("div", { className: "text-gray-300", children: "Incorrect Answers" })] }), _jsxs("div", { children: [_jsxs("div", { className: "text-3xl font-bold text-purple-400 mb-2", children: [Math.round((quizResults.correctAnswers / quizResults.totalQuestions) * 100), "%"] }), _jsx("div", { className: "text-gray-300", children: "Score" })] })] }), _jsx(Progress, { value: (quizResults.correctAnswers / quizResults.totalQuestions) * 100, className: "h-4 mb-4" }), _jsx("p", { className: "text-gray-300 mb-6", children: quizResults.correctAnswers === quizResults.totalQuestions ? 'Perfect score! Outstanding work!' :
                                                     quizResults.correctAnswers / quizResults.totalQuestions >= 0.8 ? 'Excellent performance! Keep it up!' :
                                                         quizResults.correctAnswers / quizResults.totalQuestions >= 0.6 ? 'Good job! Room for improvement.' :
-                                                            'Keep studying! Practice makes perfect.' })] }) }), _jsxs(Card, { className: "bg-card/95 border border-white/10 mb-8", children: [_jsx(CardHeader, { children: _jsx(CardTitle, { className: "text-white", children: "Review Answers" }) }), _jsx(CardContent, { children: _jsx("div", { className: "space-y-6", children: currentQuiz.questions.map((question, index) => {
+                                                            'Keep studying! Practice makes perfect.' })] }) }), _jsxs(Card, { className: "bg-card/95 border border-white/10 mb-8", children: [_jsx(CardHeader, { children: _jsx(CardTitle, { className: "text-white", children: "Review Answers" }) }), _jsx(CardContent, { children: _jsx("div", { className: "space-y-6", children: currentQuiz.questions.map((question) => {
                                                     const userAnswer = quizResults.answers[question.id];
                                                     const isCorrect = userAnswer === question.correctAnswer;
                                                     return (_jsx("div", { className: "p-4 rounded-lg border border-white/10", children: _jsxs("div", { className: "flex items-start gap-3 mb-3", children: [isCorrect ?

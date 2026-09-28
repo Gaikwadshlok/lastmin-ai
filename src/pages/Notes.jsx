@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, File, Calendar, Eye, Download, Trash2, Upload, FolderOpen, BookOpen } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from '@/components/Header';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
 import { uploadService } from '@/services/uploadService';
 import { toast } from '@/hooks/use-toast';
@@ -15,7 +14,6 @@ import { useQuery } from '@tanstack/react-query';
 import { notesService } from '@/services/notesService';
 import { generatedDocumentService } from '@/services/generatedDocumentService';
 const Notes = () => {
-    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('notes');
     // Fetch notes from the original notes API
     const { data: notesData, isLoading: notesLoading, error: notesError, refetch: refetchNotes } = useNotes();
@@ -119,7 +117,7 @@ const Notes = () => {
         // Numbered lists (1. 2. etc.)
         html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<div class="numbered-item"><span class="num">$1.</span> $2</div>');
         // Bullet points (- or *)
-        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<div class="bullet-item">$1</div>');
+        html = html.replace(/^[-*]\s+(.+)$/gm, '<div class="bullet-item">$1</div>');
         // Paragraphs: convert remaining double newlines to paragraph breaks
         html = html.replace(/\n\n+/g, '</p><p>');
         // Single newlines within paragraphs

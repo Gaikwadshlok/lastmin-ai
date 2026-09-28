@@ -44,8 +44,8 @@ router.post('/chat', protect, [
   body('message')
     .notEmpty()
     .withMessage('Message is required')
-    .isLength({ max: 1000 })
-    .withMessage('Message cannot exceed 1000 characters'),
+    .isLength({ max: 10000 })
+    .withMessage('Message cannot exceed 10000 characters'),
   body('context')
     .optional()
     .isLength({ max: 5000 })
@@ -371,8 +371,8 @@ router.post('/chat-web', protect, [
   body('message')
     .notEmpty()
     .withMessage('Message is required')
-    .isLength({ max: 1000 })
-    .withMessage('Message cannot exceed 1000 characters'),
+    .isLength({ max: 10000 })
+    .withMessage('Message cannot exceed 10000 characters'),
   body('urls')
     .optional()
     .isArray()

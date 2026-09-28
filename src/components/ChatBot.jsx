@@ -33,7 +33,6 @@ const ChatBot = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [sending, setSending] = useState(false);
     const [webAccessEnabled, setWebAccessEnabled] = useState(false);
-    const [suggestions, setSuggestions] = useState([]);
     const [selectedSuggestions, setSelectedSuggestions] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [generatedFiles, setGeneratedFiles] = useState([]);
@@ -61,7 +60,7 @@ const ChatBot = () => {
                 ].slice(0, 5);
                 setFilesContext(titles.join("; "));
             }
-            catch (err) {
+            catch {
                 // ignore
             }
         })();
@@ -176,13 +175,26 @@ const ChatBot = () => {
         }
         catch (error) {
             console.error("Chat error:", error);
+            const status = error?.response?.status || error?.status;
+            let errorMessage;
+            if (status === 401) {
+                errorMessage = "Your session has expired. Please log in again to continue chatting.";
+                // Clear stale auth data
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                // Redirect to login after a short delay
+                setTimeout(() => navigate('/login'), 3000);
+            }
+            else {
+                errorMessage = webAccessEnabled
+                    ? "Sorry, I'm having trouble accessing the web right now. Make sure the Chrome extension bridge is running and try again."
+                    : "Sorry, I'm having trouble connecting right now. Please try again later.";
+            }
             setMessages((prev) => [
                 ...prev,
                 {
                     id: (Date.now() + 1).toString(),
-                    content: webAccessEnabled
-                        ? "Sorry, I'm having trouble accessing the web right now. Make sure the Chrome extension bridge is running and try again."
-                        : "Sorry, I'm having trouble connecting right now. Please try again later.",
+                    content: errorMessage,
                     sender: "bot",
                     timestamp: new Date()
                 }
